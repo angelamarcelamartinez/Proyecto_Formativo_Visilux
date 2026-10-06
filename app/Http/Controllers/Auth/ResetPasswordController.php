@@ -61,7 +61,11 @@ class ResetPasswordController extends Controller
             return new JsonResponse(['message' => trans($response)], 200);
         }
 
-        return redirect()->route('login')
+        // Quien acaba de restablecer con el enlace del correo es el dueño de la cuenta:
+        // si es el superadmin, vuelve a su login (el público no lo deja entrar).
+        $esSuperadmin = \App\Models\Usuario::where('email', $request->email)->first()?->esSuperadmin();
+
+        return redirect()->route($esSuperadmin ? 'superadmin.login' : 'login')
             ->with('status', trans($response))
             ->withInput(['email' => $request->email]);
     }

@@ -41,6 +41,10 @@
                 <!-- FORMULARIO DE ENVÍO DE EMAIL -->
                 <form method="POST" action="{{ route('password.email') }}" novalidate>
                     @csrf
+                    @php $desdeSuperadmin = request('origen', old('origen')) === 'superadmin'; @endphp
+                    @if ($desdeSuperadmin)
+                        <input type="hidden" name="origen" value="superadmin">
+                    @endif
 
                     <div class="mb-3">
                         <label for="email" class="form-label fw-medium">Correo electrónico</label>
@@ -68,7 +72,7 @@
                         Enviar enlace de recuperación
                     </button>
 
-                    <a href="{{ route('login') }}" class="btn btn-outline-secondary w-100 rounded-pill py-2 fw-semibold text-decoration-none text-center">
+                    <a href="{{ $desdeSuperadmin ? route('superadmin.login') : route('login') }}" class="btn btn-outline-secondary w-100 rounded-pill py-2 fw-semibold text-decoration-none text-center">
                         &larr; Volver al inicio de sesión
                     </a>
                 </form>

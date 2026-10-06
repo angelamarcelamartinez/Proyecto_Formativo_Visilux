@@ -39,6 +39,12 @@
                 </div>
 
                 <!-- MENSAJES DE ERROR -->
+                @if (session('status'))
+                    <div class="alert alert-success py-2 small" role="alert">
+                        {{ session('status') }}
+                    </div>
+                @endif
+
                 <!-- FORMULARIO -->
                 <form method="POST" action="{{ route('superadmin.login.attempt') }}" novalidate>
                     @csrf
@@ -90,6 +96,10 @@
                             <input class="form-check-input" type="checkbox" name="remember" id="remember" {{ old('remember') ? 'checked' : '' }}>
                             <label class="form-check-label small" for="remember">Recordarme</label>
                         </div>
+
+                        <a href="{{ route('password.request', ['origen' => 'superadmin']) }}" class="small link-teal text-decoration-none">
+                            ¿Olvidaste tu contraseña?
+                        </a>
 
                     </div>
 

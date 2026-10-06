@@ -34,6 +34,9 @@ class ForgotPasswordController extends Controller
             return new JsonResponse(['message' => trans($response)], 200);
         }
 
-        return redirect()->route('login')->with('status', trans($response));
+        // Si la petición vino del login del superadmin, vuelve a ese login.
+        $destino = $request->input('origen') === 'superadmin' ? 'superadmin.login' : 'login';
+
+        return redirect()->route($destino)->with('status', trans($response));
     }
 }
