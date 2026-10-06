@@ -106,10 +106,6 @@
                     <button type="submit" class="btn btn-gradient w-100 rounded-pill py-2 fw-semibold mb-3">
                         Entrar como superadmin
                     </button>
-
-                    <a href="{{ url('/') }}" class="btn btn-outline-secondary w-100 rounded-pill py-2 fw-semibold text-decoration-none text-center">
-                        &larr; Volver al menú
-                    </a>
                 </form>
 
             </div>
