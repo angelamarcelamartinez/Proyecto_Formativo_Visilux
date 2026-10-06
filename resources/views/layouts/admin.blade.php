@@ -3,82 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>@yield('title', 'Panel general') · Óptica Visilux</title>
+    <title>@yield('title', 'Panel general') · {{ $miEmpresa->nombre ?? 'Óptica Visilux' }}</title>
     <link rel="icon" type="image/png" href="{{ asset('assets/img/favicon.png') }}">
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>    
-    <script>
-        tailwind.config = {
-            darkMode: 'class',
-            theme: {
-                extend: {
-                    colors: {
-                        cream: '#FAF7F2',
-                        creamdark: '#F1EBDD',
-                        olive: {
-                            50: '#F7F1E1', 100: '#EFE2C4', 300: '#C8AD6C',
-                            500: '#93762E', 600: '#7E6427', 700: '#6B5522', 800: '#4A3A18',
-                        },
-                        ink: '#2E2A22',
-                        muted: '#8A8477',
-                    },
-                    fontFamily: {
-                        serif: ['Fraunces', 'Georgia', 'serif'],
-                        sans: ['Inter', 'ui-sans-serif', 'system-ui'],
-                    },
-                    boxShadow: {
-                        card: '0 1px 2px rgba(46,42,34,0.06), 0 8px 24px -12px rgba(46,42,34,0.12)',
-                    },
-                }
-            }
-        }
-    </script>
 
-    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.1/dist/cdn.min.js"></script>
-    <script defer src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
-
-    <style>
-        body { font-family: 'Inter', ui-sans-serif, system-ui; }
-        .font-serif-heading { font-family: 'Fraunces', Georgia, serif; }
-        ::-webkit-scrollbar { width: 8px; height: 8px; }
-        ::-webkit-scrollbar-thumb { background: #E4DCC7; border-radius: 8px; }
-        [x-cloak] { display: none !important; }
-
-        /* Tus colores originales exactos */
-        :root {
-            --cream: #FAF7F2;
-            --creamdark: #F1EBDD;
-            --olive-50: #F7F1E1;
-            --olive-100: #EFE2C4;
-            --olive-300: #C8AD6C;
-            --olive-500: #93762E;
-            --olive-600: #7E6427;
-            --olive-700: #6B5522;
-            --olive-800: #4A3A18;
-            --ink: #2E2A22;
-            --muted: #8A8477;
-        }
-
-        .bg-cream { background-color: var(--cream) !important; }
-        .bg-creamdark { background-color: var(--creamdark) !important; }
-        .bg-olive-50 { background-color: var(--olive-50) !important; }
-        .bg-olive-100 { background-color: var(--olive-100) !important; }
-        .bg-olive-500 { background-color: var(--olive-500) !important; }
-        .bg-olive-600 { background-color: var(--olive-600) !important; }
-        
-        /* Asegurar soporte absoluto para el fondo oscuro y texto claro del banner */
-        .bg-ink { background-color: var(--ink) !important; }
-        .text-cream { color: var(--cream) !important; }
-
-        .text-olive-600 { color: var(--olive-600) !important; }
-        .text-olive-700 { color: var(--olive-700) !important; }
-        .text-ink { color: var(--ink) !important; }
-        .text-muted { color: var(--muted) !important; }
-        .border-olive-100 { border-color: var(--olive-100) !important; }
-    </style>
+    {{-- Estilos y scripts locales: el panel funciona sin depender de CDNs --}}
+    <link rel="stylesheet" href="{{ asset('assets/css/panel.css') }}?v={{ filemtime(public_path('assets/css/panel.css')) }}">
+    <script defer src="{{ asset('assets/js/alpine-collapse.min.js') }}"></script>
+    <script defer src="{{ asset('assets/js/alpine.min.js') }}"></script>
+    <script defer src="{{ asset('assets/js/chart.umd.min.js') }}"></script>
 
     @stack('head')
 </head>
@@ -93,7 +29,7 @@
         <div class="h-20 flex items-center gap-3 px-6 border-b border-olive-100">
             <div class="w-9 h-9 rounded-full bg-olive-600 text-cream flex items-center justify-center font-serif-heading text-sm">OV</div>
             <div>
-                <p class="font-serif-heading text-lg leading-tight">Óptica Visilux</p>
+                <p class="font-serif-heading text-lg leading-tight">{{ $miEmpresa->nombre ?? 'Óptica Visilux' }}</p>
                 <p class="text-[11px] uppercase tracking-wider text-muted">Panel de administración</p>
             </div>
         </div>
@@ -104,6 +40,25 @@
                       {{ request()->routeIs('admin.dashboard') ? 'bg-olive-600 text-cream shadow-card' : 'text-ink/80 hover:bg-olive-100' }}">
                 @include('partials.icon', ['name' => 'grid', 'class' => 'w-5 h-5 shrink-0'])
                 Panel general
+            </a>
+
+            <a href="{{ route('admin.pagina.edit') }}"
+               class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition
+                      {{ request()->routeIs('admin.pagina.*') ? 'bg-olive-600 text-cream shadow-card' : 'text-ink/80 hover:bg-olive-100' }}">
+                @include('partials.icon', ['name' => 'pencil', 'class' => 'w-5 h-5 shrink-0'])
+                Mi página
+            </a>
+
+            <a href="{{ route('admin.licencia.index') }}"
+               class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition
+                      {{ request()->routeIs('admin.licencia.*') ? 'bg-olive-600 text-cream shadow-card' : 'text-ink/80 hover:bg-olive-100' }}">
+                @include('partials.icon', ['name' => 'shield', 'class' => 'w-5 h-5 shrink-0'])
+                <span class="flex-1">Mi licencia</span>
+                @if ($avisoLicenciaDias !== null)
+                    <span class="text-[11px] font-semibold rounded-full px-2 py-0.5 {{ $avisoLicenciaDias <= 7 ? 'bg-rose-100 text-rose-700' : 'bg-amber-100 text-amber-700' }}">
+                        {{ $avisoLicenciaDias }} d
+                    </span>
+                @endif
             </a>
 
             <p class="px-3 pt-5 pb-1 text-[11px] font-semibold uppercase tracking-wider text-muted">Tablas del sistema</p>
@@ -216,6 +171,21 @@
         </header>
 
         <main class="flex-1 px-4 sm:px-8 py-6">
+            @if ($avisoLicenciaDias !== null && ! request()->routeIs('admin.licencia.*'))
+                <div class="mb-6 rounded-xl border px-4 py-3 text-sm flex flex-wrap items-center justify-between gap-3
+                            {{ $avisoLicenciaDias <= 7 ? 'border-rose-200 bg-rose-50 text-rose-800' : 'border-amber-200 bg-amber-50 text-amber-800' }}">
+                    <span class="flex items-center gap-2">
+                        @include('partials.icon', ['name' => 'clock', 'class' => 'w-4 h-4 shrink-0'])
+                        @if ($avisoLicenciaDias <= 0)
+                            Tu licencia vence hoy. Renueva para no perder el acceso al panel.
+                        @else
+                            Tu licencia vence en {{ $avisoLicenciaDias }} {{ $avisoLicenciaDias === 1 ? 'día' : 'días' }}. Renueva para no perder el acceso al panel.
+                        @endif
+                    </span>
+                    <a href="{{ route('admin.licencia.index') }}" class="font-semibold underline underline-offset-2">Renovar plan</a>
+                </div>
+            @endif
+
             @if (session('success'))
                 <div class="mb-6 rounded-xl border border-green-200 bg-green-50 text-green-800 px-4 py-3 text-sm">
                     {{ session('success') }}

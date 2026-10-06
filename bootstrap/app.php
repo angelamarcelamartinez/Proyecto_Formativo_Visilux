@@ -13,8 +13,12 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->alias([
             'admin' => \App\Http\Middleware\EnsureUserIsAdmin::class,
+            'superadmin' => \App\Http\Middleware\SoloSuperadmin::class,
+            'licencia' => \App\Http\Middleware\VerificarLicencia::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
-        //
+        // Si el formulario de contratar vuelve con errores, los datos de la
+        // tarjeta no se guardan en la sesión (aunque el pago sea simulado).
+        $exceptions->dontFlash(['password', 'password_confirmation', 'current_password', 'tarjeta_numero', 'tarjeta_cvv']);
     })->create();

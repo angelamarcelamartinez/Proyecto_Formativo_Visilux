@@ -3,7 +3,8 @@
 <!-- ======================================================
      SECCIÓN HERO (PORTADA PRINCIPAL)
 ====================================================== -->
-<section class="hero-section d-flex align-items-center" id="inicio">
+<section class="hero-section d-flex align-items-center" id="inicio"
+         style="background-image: url('{{ $pagina->imagen('hero_imagen') }}');">
 
     <!-- Capa oscura/transparente sobre la imagen de fondo -->
     <div class="hero-overlay"></div>
@@ -22,20 +23,19 @@
 
                     <!-- Texto con degradado -->
                     <span class="text-gradient d-block">
-                        Bienvenidos
+                        {{ $pagina->hero_titulo }}
                     </span>
 
                     <!-- Texto principal en blanco -->
                     <span class="text-white display-3 fw-bold">
-                        a tu salud visual
+                        {{ $pagina->hero_subtitulo }}
                     </span>
 
                 </h1>
 
                 <!-- Descripción principal -->
                 <p class="hero-subtitle text-white mb-4">
-                    Cuidamos de tus ojos con tecnología avanzada,
-                    atención personalizada y años de experiencia.
+                    {{ $pagina->hero_texto }}
                 </p>
 
                 <!-- Contenedor de botones -->
@@ -86,11 +86,11 @@
                 <div class="stat-item">
 
                     <!-- Número destacado -->
-                    <span class="stat-number">15+</span>
+                    <span class="stat-number">{{ $pagina->stat1_valor }}</span>
 
                     <!-- Descripción -->
                     <span class="stat-label d-block">
-                        Años de experiencia
+                        {{ $pagina->stat1_texto }}
                     </span>
 
                 </div>
@@ -102,10 +102,10 @@
 
                 <div class="stat-item">
 
-                    <span class="stat-number">5000+</span>
+                    <span class="stat-number">{{ $pagina->stat2_valor }}</span>
 
                     <span class="stat-label d-block">
-                        Pacientes felices
+                        {{ $pagina->stat2_texto }}
                     </span>
 
                 </div>
@@ -117,10 +117,10 @@
 
                 <div class="stat-item">
 
-                    <span class="stat-number">100%</span>
+                    <span class="stat-number">{{ $pagina->stat3_valor }}</span>
 
                     <span class="stat-label d-block">
-                        Atención personalizada
+                        {{ $pagina->stat3_texto }}
                     </span>
 
                 </div>
@@ -144,11 +144,11 @@
         <div class="text-center mb-5">
 
             <h2 class="section-title fw-bold">
-                Nuestros Servicios
+                {{ $pagina->servicios_titulo }}
             </h2>
 
             <p class="text-muted">
-                Atención especializada para todas las edades
+                {{ $pagina->servicios_subtitulo }}
             </p>
 
         </div>
@@ -164,9 +164,9 @@
                 <div class="card service-card border-0 shadow-sm h-100">
 
                     <!-- Imagen del servicio con helper asset() -->
-                    <img src="{{ asset('assets/img/niños.jpg') }}"
+                    <img src="{{ $pagina->imagen('serv1_imagen') }}"
                          class="card-img-top service-img"
-                         alt="Optometría infantil">
+                         alt="{{ $pagina->serv1_titulo }}">
 
                     <div class="card-body p-4">
 
@@ -177,20 +177,19 @@
 
                         <!-- Título -->
                         <h3 class="h4 fw-bold text-heading">
-                            Optometría Infantil
+                            {{ $pagina->serv1_titulo }}
                         </h3>
 
                         <!-- Descripción -->
                         <p class="text-muted">
-                            Evaluaciones adaptadas para niños con un enfoque
-                            lúdico y profesional que genera confianza.
+                            {{ $pagina->serv1_texto }}
                         </p>
 
                         <!-- Beneficios -->
                         <ul class="service-list list-unstyled">
-                            <li>Examen visual completo</li>
-                            <li>Detección temprana de problemas</li>
-                            <li>Asesoría para padres</li>
+                            @foreach ($pagina->lineas('serv1_items') as $item)
+                                <li>{{ $item }}</li>
+                            @endforeach
                         </ul>
 
                     </div>
@@ -207,9 +206,9 @@
                 <div class="card service-card border-0 shadow-sm h-100">
 
                     <!-- Imagen con helper asset() -->
-                    <img src="{{ asset('assets/img/adultos.jpg') }}"
+                    <img src="{{ $pagina->imagen('serv2_imagen') }}"
                          class="card-img-top service-img service-img-bw"
-                         alt="Terapia visual">
+                         alt="{{ $pagina->serv2_titulo }}">
 
                     <div class="card-body p-4">
 
@@ -220,20 +219,19 @@
 
                         <!-- Nombre servicio -->
                         <h3 class="h4 fw-bold text-heading">
-                            Terapia Visual
+                            {{ $pagina->serv2_titulo }}
                         </h3>
 
                         <!-- Descripción -->
                         <p class="text-muted">
-                            Programas personalizados para mejorar la coordinación
-                            ocular, enfoque y rendimiento visual.
+                            {{ $pagina->serv2_texto }}
                         </p>
 
                         <!-- Beneficios -->
                         <ul class="service-list list-unstyled">
-                            <li>Ejercicios visuales guiados</li>
-                            <li>Seguimiento periódico</li>
-                            <li>Equipos de última generación</li>
+                            @foreach ($pagina->lineas('serv2_items') as $item)
+                                <li>{{ $item }}</li>
+                            @endforeach
                         </ul>
 
                     </div>
@@ -260,8 +258,8 @@
             <!-- Imagen de la doctora con helper asset() -->
             <div class="col-lg-5">
 
-                <img src="{{ asset('assets/img/optometra_1.jpg') }}"
-                     alt="Dra. María Fernández"
+                <img src="{{ $pagina->imagen('prof_imagen') }}"
+                     alt="{{ $pagina->prof_nombre }}"
                      class="img-fluid doctor-photo shadow">
 
             </div>
@@ -270,56 +268,35 @@
             <div class="col-lg-7">
 
                 <h2 class="fw-bold text-heading mb-1">
-                    Dra. Catalina Fernandez
+                    {{ $pagina->prof_nombre }}
                 </h2>
 
                 <p class="text-teal fw-semibold mb-3">
-                    Optómetra Especializada
+                    {{ $pagina->prof_cargo }}
                 </p>
 
                 <p class="text-muted mb-4">
-                    Con más de 15 años de experiencia, la Dra. Esquivel
-                    combina precisión clínica con un trato cercano.
+                    {{ $pagina->prof_texto }}
                 </p>
 
                 <!-- Lista de estudios -->
                 <ul class="credentials-list list-unstyled">
 
-                    <li>
-                        <span class="credential-dot"></span>
+                    @foreach ($pagina->credenciales() as $credencial)
+                        <li>
+                            <span class="credential-dot"></span>
 
-                        <div>
-                            <strong>Optometría Certificada</strong>
+                            <div>
+                                <strong>{{ $credencial['titulo'] }}</strong>
 
-                            <span class="d-block text-muted small">
-                                Universidad Nacional de Colombia
-                            </span>
-                        </div>
-                    </li>
-
-                    <li>
-                        <span class="credential-dot"></span>
-
-                        <div>
-                            <strong>Terapia Visual Avanzada</strong>
-
-                            <span class="d-block text-muted small">
-                                Instituto de Salud Visual
-                            </span>
-                        </div>
-                    </li>
-
-                    <li>
-                        <span class="credential-dot"></span>
-
-                        <div>
-                            <strong>Pediatría y Salud Ocular</strong>
-
-                            <span class="d-block text-muted small">
-                                Colegio Colombiano de Optómetras
-                            </span>
-                        </div>
-                    </li>
+                                @if ($credencial['lugar'])
+                                    <span class="d-block text-muted small">
+                                        {{ $credencial['lugar'] }}
+                                    </span>
+                                @endif
+                            </div>
+                        </li>
+                    @endforeach
 
                 </ul>
 
@@ -341,11 +318,11 @@
         <div class="text-center mb-5">
 
             <h2 class="section-title text-teal fw-bold">
-                ¿Por qué elegirnos?
+                {{ $pagina->porque_titulo }}
             </h2>
 
             <p class="text-muted">
-                Somos más que una óptica, somos tu aliado en salud visual
+                {{ $pagina->porque_subtitulo }}
             </p>
 
         </div>
@@ -362,11 +339,11 @@
                     </div>
 
                     <h3 class="h5 fw-bold">
-                        Experiencia Comprobada
+                        {{ $pagina->ventaja1_titulo }}
                     </h3>
 
                     <p class="text-muted mb-0">
-                        Más de 15 años cuidando la visión.
+                        {{ $pagina->ventaja1_texto }}
                     </p>
 
                 </div>
@@ -381,11 +358,11 @@
                     </div>
 
                     <h3 class="h5 fw-bold">
-                        Tecnología Avanzada
+                        {{ $pagina->ventaja2_titulo }}
                     </h3>
 
                     <p class="text-muted mb-0">
-                        Equipos modernos para diagnósticos precisos.
+                        {{ $pagina->ventaja2_texto }}
                     </p>
 
                 </div>

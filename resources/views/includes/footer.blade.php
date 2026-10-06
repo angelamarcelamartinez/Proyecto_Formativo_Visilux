@@ -5,14 +5,18 @@
         <div class="row g-4">
             <div class="col-lg-4">
                 <div class="footer-logo-wrap mb-3">
-                    <img src="{{ asset('assets/img/logo-visilux.png') }}" alt="VisiOptica" class="footer-logo">
+                    <img src="{{ $sitio?->imagen('logo') ?? asset('assets/img/logo-visilux.png') }}" alt="{{ $sitioEmpresa->nombre ?? 'VisiOptica' }}" class="footer-logo">
                 </div>
                 <p class="footer-text opacity-90">
-                    Somos más que una óptica: acompañamos tu salud visual con tecnología, calidez humana y experiencia comprobada.
+                    {{ $sitio->footer_texto ?? '' }}
                 </p>
                 <div class="d-flex gap-2">
-                    <a href="#" class="social-btn" aria-label="Instagram"><i class="bi bi-instagram"></i></a>
-                    <a href="#" class="social-btn" aria-label="Facebook"><i class="bi bi-facebook"></i></a>
+                    @if ($sitio?->instagram)
+                        <a href="{{ $sitio->instagram }}" target="_blank" rel="noopener" class="social-btn" aria-label="Instagram"><i class="bi bi-instagram"></i></a>
+                    @endif
+                    @if ($sitio?->facebook)
+                        <a href="{{ $sitio->facebook }}" target="_blank" rel="noopener" class="social-btn" aria-label="Facebook"><i class="bi bi-facebook"></i></a>
+                    @endif
                 </div>
             </div>
 
@@ -32,18 +36,24 @@
             <div class="col-lg-2">
                 <h5 class="fw-semibold mb-3">Horario</h5>
                 <ul class="list-unstyled footer-text small opacity-90">
-                    <li class="mb-2">Lun – Vie: 8:00 – 18:00</li>
-                    <li class="mb-2">Sáb: 9:00 – 14:00</li>
-                    <li>Dom: Cerrado</li>
+                    @foreach ($sitio ? $sitio->lineas('horario') : [] as $linea)
+                        <li class="{{ $loop->last ? '' : 'mb-2' }}">{{ $linea }}</li>
+                    @endforeach
                 </ul>
             </div>
 
             <div class="col-lg-2">
                 <h5 class="fw-semibold mb-3">Contacto</h5>
                 <ul class="list-unstyled footer-text small opacity-90">
-                    <li class="mb-2"><i class="bi bi-telephone me-2"></i> +57 300 123 4567</li>
-                    <li class="mb-2"><i class="bi bi-envelope me-2"></i> info@visioptica.com</li>
-                    <li><i class="bi bi-geo-alt me-2"></i> Bogotá, Colombia</li>
+                    @if ($sitio?->telefono)
+                        <li class="mb-2"><i class="bi bi-telephone me-2"></i> {{ $sitio->telefono }}</li>
+                    @endif
+                    @if ($sitio?->email)
+                        <li class="mb-2"><i class="bi bi-envelope me-2"></i> {{ $sitio->email }}</li>
+                    @endif
+                    @if ($sitio?->direccion)
+                        <li><i class="bi bi-geo-alt me-2"></i> {{ $sitio->direccion }}</li>
+                    @endif
                 </ul>
             </div>
         </div>
@@ -51,7 +61,7 @@
 
     <div class="footer-bottom text-center py-3">
         <small>
-            &copy; {{ date('Y') }} Visilux. Todos los derechos reservados.
+            &copy; {{ date('Y') }} {{ $sitioEmpresa->nombre ?? 'Visilux' }}. Todos los derechos reservados.
         </small>
     </div>
 </footer>

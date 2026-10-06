@@ -18,6 +18,11 @@ class EnsureUserIsAdmin
     {
         $user = Auth::user();
 
+        // El superadmin tiene su propio panel.
+        if ($user && $user->esSuperadmin()) {
+            return redirect()->route('superadmin.dashboard');
+        }
+
         if (! $user || (int) $user->id_rol !== 1) {
             Auth::logout();
             $request->session()->invalidate();

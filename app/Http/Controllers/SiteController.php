@@ -2,7 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Empresa;
+use App\Models\PaginaEmpresa;
 use App\Support\AgendaCitas;
+use App\Support\Licencias;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -12,6 +15,48 @@ use Illuminate\Support\Facades\Schema;
 
 class SiteController extends Controller
 {
+    /**
+     * Página principal ("/"): muestra la óptica configurada como principal.
+     */
+    public function inicio()
+    {
+        $empresa = Empresa::find(config('visioptica.empresa_principal'));
+        abort_unless($empresa, 404);
+
+        return $this->mostrarPagina($empresa);
+    }
+
+    /**
+     * Página pública de una óptica: /optica/{slug}
+     */
+    public function optica(string $slug)
+    {
+        $empresa = Empresa::where('slug', $slug)->firstOrFail();
+
+        return $this->mostrarPagina($empresa);
+    }
+
+    /**
+     * Pinta el index con el contenido de la óptica. Si está suspendida o sin
+     * licencia vigente, muestra un aviso en lugar de la página.
+     * También recuerda en la sesión qué óptica está viendo el visitante, para que
+     * las citas que agende queden a nombre de esa óptica.
+     */
+    protected function mostrarPagina(Empresa $empresa)
+    {
+        if (! Licencias::puedeIngresar($empresa)) {
+            return response()->view('optica-no-disponible', ['empresa' => $empresa], 503);
+        }
+
+        session(['optica_nit' => $empresa->nit]);
+
+        return view('index', [
+            'empresa' => $empresa,
+            'pagina' => PaginaEmpresa::deEmpresa($empresa),
+            'pageTitle' => $empresa->nombre . ' ·',
+        ]);
+    }
+
     /**
      * Vista pública: Terapia Visual (niños y adultos).
      */
@@ -32,7 +77,10 @@ class SiteController extends Controller
      */
     public function planes()
     {
-        return view('planes');
+        // Los precios salen de la tabla `plan`, que edita el superadmin.
+        $planes = \App\Models\Plan::where('activo', 1)->orderBy('meses')->get();
+
+        return view('planes', compact('planes'));
     }
 
     /**
@@ -206,7 +254,9 @@ class SiteController extends Controller
                     'id_tipo_cita' => $data['id_tipo_cita'],
                     'id_estado' => AgendaCitas::estadoPendiente(),
                     'id_motivo' => $data['id_motivo'],
-                ]);
+                ] + (Schema::hasColumn('asignacion_cita', 'nit_empresa')
+                    ? ['nit_empresa' => $usuario->nit_empresa ?? session('optica_nit', config('visioptica.empresa_principal'))]
+                    : []));
 
                 return true;
             });
@@ -234,6 +284,8 @@ class SiteController extends Controller
             'telefono' => $data['telefono'],
             'motivo_cita' => $detalle,
             'fecha_registro' => now(),
+            // Óptica cuya página estaba viendo el visitante
+            'nit_empresa' => session('optica_nit', config('visioptica.empresa_principal')),
         ];
         if (Schema::hasColumn('usuarios_no_registrados', 'id_tipo_docu')) {
             $registro['id_tipo_docu'] = $data['id_tipo_docu'];

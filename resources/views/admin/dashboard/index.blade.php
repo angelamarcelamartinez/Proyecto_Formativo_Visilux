@@ -51,7 +51,7 @@
         <div class="absolute inset-0 opacity-25 bg-[radial-gradient(circle_at_80%_20%,#93762E,transparent_55%)]"></div>
         <div class="relative px-6 sm:px-10 py-10 flex flex-col md:flex-row md:items-center md:justify-between gap-6">
             <div>
-                <p class="text-[11px] uppercase tracking-[0.2em] text-olive-300">Panel general &middot; Óptica Visilux</p>
+                <p class="text-[11px] uppercase tracking-[0.2em] text-olive-300">Panel general &middot; {{ $miEmpresa->nombre ?? 'Óptica Visilux' }}</p>
                 <h1 class="font-serif text-3xl sm:text-4xl mt-3">{{ $saludo }}, {{ $nombre }}</h1>
                 <p class="mt-3 text-sm text-cream/70 max-w-lg leading-relaxed">
                     Administra las {{ $totalTablas }} tablas del sistema — usuarios, catálogo, citas,

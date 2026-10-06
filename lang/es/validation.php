@@ -161,7 +161,7 @@ return array (
   'unique' => 'Ya existe un registro con ese valor en :attribute.',
   'uploaded' => 'No se pudo subir :attribute.',
   'uppercase' => 'The :attribute field must be uppercase.',
-  'url' => ':attribute debe ser una URL válida.',
+  'url' => ':attribute debe ser un enlace válido que empiece por https://',
   'ulid' => 'The :attribute field must be a valid ULID.',
   'uuid' => 'The :attribute field must be a valid UUID.',
   'custom' => 
@@ -190,5 +190,12 @@ return array (
     'id_motivo' => 'motivo',
     'id_optometra' => 'optómetra',
     'comentario' => 'comentario',
+    'direccion' => 'dirección',
+    'ciudad' => 'ciudad',
+    'id_plan' => 'plan',
+    'precio' => 'precio',
+    'meses' => 'meses',
+    'valor' => 'valor',
+    'mensaje' => 'mensaje',
   ),
 );

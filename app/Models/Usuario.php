@@ -29,6 +29,7 @@ class Usuario extends Authenticatable
         'id_tipo_docu',
         'id_estado',
         'id_ciudad',
+        'nit_empresa',
         'remember_token'
     ];
 
@@ -61,6 +62,19 @@ class Usuario extends Authenticatable
     public function esAdministrador(): bool
     {
         return (int) $this->id_rol === 1;
+    }
+
+    public function esSuperadmin(): bool
+    {
+        return (int) $this->id_rol === (int) config('visioptica.rol_superadmin');
+    }
+
+    /**
+     * Óptica a la que pertenece (el superadmin no tiene).
+     */
+    public function empresa()
+    {
+        return $this->belongsTo(\App\Models\Empresa::class, 'nit_empresa', 'nit');
     }
 
     public function rol()

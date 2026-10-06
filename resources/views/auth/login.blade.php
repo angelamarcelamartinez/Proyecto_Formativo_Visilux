@@ -39,6 +39,20 @@
                     </div>
                 @endif
 
+                <!-- ÓPTICA SIN LICENCIA VIGENTE O SUSPENDIDA -->
+                @if ($bloqueo = session('licencia_bloqueada'))
+                    <div class="alert alert-warning small" role="alert">
+                        <i class="bi bi-lock-fill me-1"></i>
+                        {{ $bloqueo['mensaje'] }}
+                        @if ($bloqueo['renovar_nit'])
+                            <a href="{{ route('renovar.create', ['nit' => $bloqueo['renovar_nit']]) }}"
+                               class="btn btn-sm btn-gradient rounded-pill w-100 mt-2">
+                                Renovar mi plan
+                            </a>
+                        @endif
+                    </div>
+                @endif
+
                 <!-- FORMULARIO -->
                 <form method="POST" action="{{ route('login') }}" novalidate>
                     @csrf

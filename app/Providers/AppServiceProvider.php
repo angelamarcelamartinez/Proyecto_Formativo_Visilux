@@ -4,6 +4,8 @@ namespace App\Providers;
 
 use App\Models\Carrito;
 use App\Models\DetalleCarritoProducto;
+use App\Models\Empresa;
+use App\Models\PaginaEmpresa;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
@@ -43,6 +45,45 @@ class AppServiceProvider extends ServiceProvider
             }
 
             $view->with('cartCount', $cantidad);
+        });
+
+        // Logo, contacto y redes del header y footer salen de la página de la
+        // óptica que se está viendo (o de la principal si no hay ninguna).
+        View::composer(['includes.header', 'includes.footer'], function ($view) {
+            static $cache = null;
+
+            if ($cache === null) {
+                $pagina = $view->getData()['pagina'] ?? null;
+
+                if (! $pagina instanceof PaginaEmpresa) {
+                    $empresa = Empresa::find(session('optica_nit', config('visioptica.empresa_principal')))
+                        ?? Empresa::find(config('visioptica.empresa_principal'));
+                    $pagina = $empresa ? PaginaEmpresa::deEmpresa($empresa) : null;
+                }
+
+                $cache = [
+                    'sitio' => $pagina,
+                    'sitioEmpresa' => $pagina?->empresa,
+                ];
+            }
+
+            $view->with($cache);
+        });
+
+        // Número de solicitudes de plan por aprobar, para el menú del superadmin.
+        View::composer('layouts.superadmin', function ($view) {
+            $view->with('solicitudesPendientes', \App\Models\Licencia::where('estado', 'pendiente')->count());
+        });
+
+        // Aviso de pago en el panel de la óptica cuando faltan 30 días o menos.
+        View::composer(['layouts.admin', 'admin.*'], function ($view) {
+            $empresa = Auth::user()?->empresa;
+            $dias = $empresa?->diasRestantes();
+
+            $view->with([
+                'miEmpresa' => $empresa,
+                'avisoLicenciaDias' => ($dias !== null && $dias <= config('visioptica.dias_aviso')) ? $dias : null,
+            ]);
         });
     }
 }

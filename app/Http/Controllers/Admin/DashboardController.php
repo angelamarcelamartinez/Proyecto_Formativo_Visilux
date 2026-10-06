@@ -15,17 +15,23 @@ class DashboardController extends Controller
     {
         $hoy = now()->toDateString();
 
+        // Todo el panel muestra solo los datos de la óptica del usuario conectado.
+        $nit = Auth::user()->nit_empresa;
+
         // 1) Citas agendadas hoy
         $citasHoy = DB::table('asignacion_cita')
+            ->where('nit_empresa', $nit)
             ->whereDate('fecha_cita', $hoy)
             ->count();
 
         // 2) Ventas del día (productos + medicamentos)
         $ventasProductos = (float) DB::table('venta')
+            ->where('nit_empresa', $nit)
             ->whereDate('fecha_venta', $hoy)
             ->sum('total');
 
         $ventasMedicamentos = (float) DB::table('venta_medicamento')
+            ->where('nit_empresa', $nit)
             ->whereDate('fecha', $hoy)
             ->sum('total');
 
@@ -34,11 +40,13 @@ class DashboardController extends Controller
         // 3) Pedidos a proveedores en tránsito (estado "Enviado" o "En proceso")
         $pedidosEnTransito = DB::table('pedido')
             ->join('estado', 'estado.id_estado', '=', 'pedido.id_estado')
+            ->where('pedido.nit_empresa', $nit)
             ->whereIn('estado.nom_estado', ['Enviado', 'En proceso'])
             ->count();
 
         // 4) Productos con stock bajo (stock_actual <= stock_minimo)
         $stockBajo = DB::table('lote')
+            ->where('nit_empresa', $nit)
             ->whereColumn('stock_actual', '<=', 'stock_minimo')
             ->distinct('id_producto')
             ->count('id_producto');
@@ -56,7 +64,8 @@ class DashboardController extends Controller
         $citasQuery = DB::table('asignacion_cita')
             ->join('usuario', 'usuario.documento', '=', 'asignacion_cita.id_usuario')
             ->join('optometra', 'optometra.doc_optometra', '=', 'asignacion_cita.id_optometra')
-            ->join('estado', 'estado.id_estado', '=', 'asignacion_cita.id_estado');
+            ->join('estado', 'estado.id_estado', '=', 'asignacion_cita.id_estado')
+            ->where('asignacion_cita.nit_empresa', $nit);
 
         if ($rango === 'dia') {
             $citasQuery->whereDate('asignacion_cita.fecha_cita', now()->toDateString());

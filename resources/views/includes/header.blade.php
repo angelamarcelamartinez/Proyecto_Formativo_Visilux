@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     
     <!-- Título dinámico -->
-    <title>{{ config('app.name', 'Visilux') }} | {{ $pageTitle ?? 'Inicio' }}</title>
+    <title>{{ $pageTitle ?? config('VisiOptica') }} VisiOptica</title>
     <link rel="icon" type="image/png" href="{{ asset('assets/img/favicon.ico') }}">
 
     <!-- Fuentes y estilos -->
@@ -23,8 +23,8 @@
 <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm sticky-top py-3">
     <div class="container">
         <!-- Logo -->
-        <a class="navbar-brand d-flex align-items-center" href="{{ url('/') }}">
-            <img src="{{ asset('assets/img/logo-visilux.png') }}" alt="VisiOptica" class="navbar-logo">
+        <a class="navbar-brand d-flex align-items-center" href="{{ $sitioEmpresa?->urlPagina() ?? url('/') }}">
+            <img src="{{ $sitio?->imagen('logo') ?? asset('assets/img/logo-visilux.png') }}" alt="{{ $sitioEmpresa->nombre ?? 'VisiOptica' }}" class="navbar-logo">
         </a>
 
         <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#mainNav">
@@ -34,7 +34,7 @@
         <div class="collapse navbar-collapse" id="mainNav">
             <ul class="navbar-nav mx-auto mb-2 mb-lg-0 gap-lg-3">
                 <li class="nav-item">
-                    <a class="nav-link {{ request()->routeIs('home') ? 'active' : '' }}" href="{{ url('/') }}#inicio" @if (request()->routeIs('home')) aria-current="page" @endif>Inicio</a>
+                    <a class="nav-link {{ request()->routeIs('home', 'optica.show') ? 'active' : '' }}" href="{{ $sitioEmpresa?->urlPagina() ?? url('/') }}#inicio" @if (request()->routeIs('home', 'optica.show')) aria-current="page" @endif>Inicio</a>
                 </li>
                 <li class="nav-item">
                     <a class="nav-link {{ request()->routeIs('productos.index') ? 'active' : '' }}" href="{{ route('productos.index') }}">Productos</a>

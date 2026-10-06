@@ -1,4 +1,9 @@
 @php
+    $planes = $planes ?? \App\Models\Plan::where('activo', 1)->orderBy('meses')->get();
+
+    // Funciones que se muestran en cada tarjeta (las demás se ven en "¿Qué incluye cada plan?")
+    $funciones = ['Agenda y citas', 'Recordatorios de control', 'Historias clínicas', 'Terapia visual', 'Catálogo y tienda en línea', 'Inventario', 'Proveedores y envío', 'Ventas', 'Panel de administración', 'Página web propia para tu óptica'];
+    $visibles = 5;
     /*
      * Detalle de funcionalidades para la sección "¿Qué incluye cada plan?".
      * Para agregar o quitar algo, edita esta lista.
@@ -151,6 +156,7 @@
 
 <!-- ======================================================
      SECCIÓN DE PLANES
+     Los planes y precios salen de la tabla `plan` (los edita el superadmin).
 ====================================================== -->
 <section class="section-plans py-5" id="planes">
 
@@ -159,173 +165,53 @@
         <!-- Fila de planes -->
         <div class="row g-4 justify-content-center align-items-stretch">
 
-            <!-- ==========================================
-                 PLAN 1 MES
-            =========================================== -->
-            <div class="col-lg-3 col-md-6">
+            @foreach ($planes as $plan)
+                <div class="col-lg-3 col-md-6">
 
-                <div class="card plan-card border shadow-sm h-100 p-4">
+                    <div class="card plan-card {{ $plan->destacado ? 'plan-card-featured border-0' : 'border' }} shadow-sm h-100 p-4">
 
-                    <h3 class="h5 fw-bold plan-name mb-1">
-                        FREE 1 mes
-                    </h3>
+                        @if ($plan->destacado)
+                            <span class="plan-badge">Más popular</span>
+                        @endif
 
-                    <p class="text-muted small mb-3">
-                        Prueba mensual
-                    </p>
+                        <h3 class="h5 fw-bold plan-name mb-1">
+                            {{ $plan->es_prueba ? 'Prueba gratis' : $plan->nombre }}
+                        </h3>
 
-                    <div class="plan-price mb-4">
-                        <span class="plan-price-amount">0</span>
-                        <span class="plan-price-period">/ mes</span>
+                        <div class="plan-price mb-1">
+                            <span class="plan-price-amount">{{ $plan->precio > 0 ? '$' . number_format($plan->precio, 0, ',', '.') : '$0' }}</span>
+                            <span class="plan-price-period">/ {{ $plan->meses }} {{ $plan->meses === 1 ? 'mes' : 'meses' }}</span>
+                        </div>
+
+                        <p class="plan-billing mb-4">
+                            @if ($plan->es_prueba)
+                                Una sola vez por óptica
+                            @else
+                                Equivale a ${{ number_format($plan->precio / max($plan->meses, 1), 0, ',', '.') }} al mes
+                            @endif
+                        </p>
+
+                        <p class="plan-includes-title mb-2">
+                            <i class="bi bi-stars"></i> Todo Incluido
+                        </p>
+
+                        <ul class="plan-features list-unstyled mb-3 flex-grow-1">
+                            @foreach (array_slice($funciones, 0, $visibles) as $funcion)
+                                <li><i class="bi bi-check2"></i>{{ $funcion }}</li>
+                            @endforeach
+                        </ul>
+
+                        <a href="#que-incluye" class="plan-more mb-4">+ {{ count($funciones) - $visibles }} funcionalidades más</a>
+
+                        <a href="{{ route('contratar.create', $plan->id_plan) }}"
+                           class="btn {{ $plan->destacado ? 'btn-plan' : 'btn-plan-outline' }} rounded-pill w-100">
+                            {{ $plan->es_prueba ? 'Probar gratis' : 'Elegir plan' }}
+                        </a>
+
                     </div>
 
-                    <p class="plan-includes-title mb-2">
-                        <i class="bi bi-stars"></i> Todo Incluido
-                    </p>
-
-                    <ul class="plan-features list-unstyled mb-3 flex-grow-1">
-                        <li><i class="bi bi-check2"></i>Agenda y citas</li>
-                        <li><i class="bi bi-check2"></i>Recordatorios de control</li>
-                        <li><i class="bi bi-check2"></i>Historias clínicas</li>
-                        <li><i class="bi bi-check2"></i>Terapia visual</li>
-                        <li><i class="bi bi-check2"></i>Catálogo y tienda en línea</li>
-                    </ul>
-
-                    <a href="#que-incluye" class="plan-more mb-4">+ 4 funcionalidades más</a>
-
-                    <a href="{{ route('register') }}"
-                       class="btn btn-plan-outline rounded-pill w-100">
-                        Elegir plan
-                    </a>
-
                 </div>
-
-            </div>
-
-            <!-- ==========================================
-                 PLAN 6 MESES (Destacado)
-            =========================================== -->
-            <div class="col-lg-3 col-md-6">
-
-                <div class="card plan-card plan-card-featured border-0 shadow-sm h-100 p-4">
-
-                    <span class="plan-badge">Más popular</span>
-
-                    <h3 class="h5 fw-bold plan-name mb-1">
-                        6 meses
-                    </h3>
-
-                    <div class="plan-price mb-1">
-                        <span class="plan-price-amount">$299.999</span>
-                        <span class="plan-price-period">/ mes</span>
-                    </div>
-
-                    <p class="plan-billing mb-4">Facturado cada 6 meses</p>
-
-                    <p class="plan-includes-title mb-2">
-                        <i class="bi bi-stars"></i> Todo Incluido
-                    </p>
-
-                    <ul class="plan-features list-unstyled mb-3 flex-grow-1">
-                        <li><i class="bi bi-check2"></i>Agenda y citas</li>
-                        <li><i class="bi bi-check2"></i>Recordatorios de control</li>
-                        <li><i class="bi bi-check2"></i>Historias clínicas</li>
-                        <li><i class="bi bi-check2"></i>Terapia visual</li>
-                        <li><i class="bi bi-check2"></i>Catálogo y tienda en línea</li>
-                    </ul>
-
-                    <a href="#que-incluye" class="plan-more mb-4">+ 4 funcionalidades más</a>
-
-                    <a href="{{ route('register') }}"
-                       class="btn btn-plan rounded-pill w-100">
-                        Elegir plan
-                    </a>
-
-                </div>
-
-            </div>
-
-            <!-- ==========================================
-                 PLAN 9 MESES
-            =========================================== -->
-            <div class="col-lg-3 col-md-6">
-
-                <div class="card plan-card border shadow-sm h-100 p-4">
-
-                    <h3 class="h5 fw-bold plan-name mb-1">
-                        9 meses
-                    </h3>
-
-                    <div class="plan-price mb-1">
-                        <span class="plan-price-amount">$449.999</span>
-                        <span class="plan-price-period">/ mes</span>
-                    </div>
-
-                    <p class="plan-billing mb-4">Facturado cada 9 meses</p>
-
-                    <p class="plan-includes-title mb-2">
-                        <i class="bi bi-stars"></i> Todo Incluido
-                    </p>
-
-                    <ul class="plan-features list-unstyled mb-3 flex-grow-1">
-                        <li><i class="bi bi-check2"></i>Agenda y citas</li>
-                        <li><i class="bi bi-check2"></i>Recordatorios de control</li>
-                        <li><i class="bi bi-check2"></i>Historias clínicas</li>
-                        <li><i class="bi bi-check2"></i>Terapia visual</li>
-                        <li><i class="bi bi-check2"></i>Catálogo y tienda en línea</li>
-                    </ul>
-
-                    <a href="#que-incluye" class="plan-more mb-4">+ 4 funcionalidades más</a>
-
-                    <a href="{{ route('register') }}"
-                       class="btn btn-plan-outline rounded-pill w-100">
-                        Elegir plan
-                    </a>
-
-                </div>
-
-            </div>
-
-            <!-- ==========================================
-                 PLAN 12 MESES
-            =========================================== -->
-            <div class="col-lg-3 col-md-6">
-
-                <div class="card plan-card border shadow-sm h-100 p-4">
-
-                    <h3 class="h5 fw-bold plan-name mb-1">
-                        12 meses
-                    </h3>
-
-                    <div class="plan-price mb-1">
-                        <span class="plan-price-amount">$599.999</span>
-                        <span class="plan-price-period">/ mes</span>
-                    </div>
-
-                    <p class="plan-billing mb-4">Facturado cada 12 meses</p>
-
-                    <p class="plan-includes-title mb-2">
-                        <i class="bi bi-stars"></i> Todo Incluido
-                    </p>
-
-                    <ul class="plan-features list-unstyled mb-3 flex-grow-1">
-                        <li><i class="bi bi-check2"></i>Agenda y citas</li>
-                        <li><i class="bi bi-check2"></i>Recordatorios de control</li>
-                        <li><i class="bi bi-check2"></i>Historias clínicas</li>
-                        <li><i class="bi bi-check2"></i>Terapia visual</li>
-                        <li><i class="bi bi-check2"></i>Catálogo y tienda en línea</li>
-                    </ul>
-
-                    <a href="#que-incluye" class="plan-more mb-4">+ 4 funcionalidades más</a>
-
-                    <a href="{{ route('register') }}"
-                       class="btn btn-plan-outline rounded-pill w-100">
-                        Elegir plan
-                    </a>
-
-                </div>
-
-            </div>
+            @endforeach
 
         </div>
 
