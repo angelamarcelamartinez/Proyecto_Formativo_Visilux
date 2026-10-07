@@ -49,7 +49,7 @@ class RegistroOptica
                 'prueba_usada' => 0,
                 'fecha_registro' => now(),
                 // PDF de la Cámara de Comercio: el superadmin lo revisa y confirma el NIT al aprobar.
-                'camara_comercio' => $rutaCamara,
+                'camara_de_comercio' => $rutaCamara,
             ]);
 
             // El administrador queda creado pero sin poder entrar: su contraseña es

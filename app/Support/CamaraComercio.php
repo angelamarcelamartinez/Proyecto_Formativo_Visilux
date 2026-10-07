@@ -34,7 +34,7 @@ class CamaraComercio
         ];
     }
 
-    /** Guarda el PDF y devuelve su ruta relativa (la que va en empresa.camara_comercio). */
+    /** Guarda el PDF y devuelve su ruta relativa (la que va en empresa.camara_de_comercio). */
     public static function guardar(UploadedFile $archivo, string $nit): string
     {
         $nombre = Str::slug($nit) . '_' . now()->format('YmdHis') . '.pdf';

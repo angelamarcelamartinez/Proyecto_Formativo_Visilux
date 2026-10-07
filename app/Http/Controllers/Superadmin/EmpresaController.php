@@ -164,7 +164,7 @@ class EmpresaController extends Controller
                 'estado' => 'activa',
                 'prueba_usada' => 0,
                 'fecha_registro' => now(),
-                'camara_comercio' => $rutaCamara,
+                'camara_de_comercio' => $rutaCamara,
             ]);
 
             Usuario::create([
@@ -219,11 +219,11 @@ class EmpresaController extends Controller
             'confirmo' => ['accepted'],
         ]), $this->mensajesVerificacion(), $this->nombresCampos());
 
-        $anterior = $empresa->camara_comercio;
+        $anterior = $empresa->camara_de_comercio;
         $rutaCamara = CamaraComercio::guardar($request->file('camara_comercio'), $empresa->nit);
 
         $empresa->update([
-            'camara_comercio' => $rutaCamara,
+            'camara_de_comercio' => $rutaCamara,
             'nombre' => $data['nombre'],
             'slug' => Empresa::slugDisponible(($data['slug'] ?? null) ?: $data['nombre'], $empresa->nit),
             'email' => $data['email'],
@@ -248,7 +248,7 @@ class EmpresaController extends Controller
         $empresa = Empresa::findOrFail($nit);
         abort_unless($empresa->tieneCamara(), 404, 'Esta óptica no tiene certificado cargado.');
 
-        return response()->file(CamaraComercio::ruta($empresa->camara_comercio), [
+        return response()->file(CamaraComercio::ruta($empresa->camara_de_comercio), [
             'Content-Type' => 'application/pdf',
             'Content-Disposition' => 'inline; filename="camara-comercio-' . $empresa->nit . '.pdf"',
         ]);
