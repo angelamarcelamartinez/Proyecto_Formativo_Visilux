@@ -49,6 +49,9 @@ class ResetPasswordController extends Controller
     protected function resetPassword($user, $password)
     {
         $user->password = Hash::make($password);
+        if ($user->debe_cambiar_password) {
+            $user->id_estado = 1; // eligió una contraseña propia: pasa a Activo
+        }
         $user->setRememberToken(Str::random(60));
         $user->save();
 

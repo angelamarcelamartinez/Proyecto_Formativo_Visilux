@@ -16,8 +16,8 @@
                     </h1>
                     <p class="text-muted mb-4">
                         {{ $registro['empresa'] }} quedó registrada con el plan {{ $registro['plan'] }}.
-                        Cuando lo aprobemos te llegará a <strong>{{ $registro['correo'] }}</strong>
-                        un correo con la contraseña para entrar al panel.
+                        Primero verificaremos tu NIT con la Cámara de Comercio. Cuando lo aprobemos llegará a <strong>{{ $registro['correo'] }}</strong>
+                        un correo con la contraseña temporal; para entrar al panel usa el correo <strong>{{ $registro['usuario'] }}</strong>.
                     </p>
 
                     @if ($registro['pago'])

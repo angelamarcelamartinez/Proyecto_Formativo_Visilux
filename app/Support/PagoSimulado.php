@@ -12,8 +12,7 @@ use Illuminate\Validation\ValidationException;
  * Nunca se guarda el número completo ni el CVV: solo la marca y los últimos 4 dígitos.
  *
  * Tarjetas de prueba:
- *   4242 4242 4242 4242  → pago aprobado (Visa)
- *   5555 5555 5555 4444  → pago aprobado (Mastercard)
+ *   Cualquier número de 16 dígitos → pago aprobado (la marca se deduce si es Visa/Mastercard)
  *   4000 0000 0000 0002  → pago rechazado por el banco
  */
 class PagoSimulado
@@ -27,14 +26,12 @@ class PagoSimulado
     {
         $numero = preg_replace('/\D/', '', $numero);
 
-        if (! static::luhnValido($numero)) {
-            throw ValidationException::withMessages(['tarjeta_numero' => 'El número de la tarjeta no es válido. Revisa que esté completo.']);
+        // Es una simulación: sirve cualquier número de 16 dígitos (con o sin espacios).
+        if (! preg_match('/^\d{16}$/', $numero)) {
+            throw ValidationException::withMessages(['tarjeta_numero' => 'El número de la tarjeta debe tener 16 dígitos.']);
         }
 
-        $marca = static::marca($numero);
-        if (! $marca) {
-            throw ValidationException::withMessages(['tarjeta_numero' => 'Solo se aceptan tarjetas Visa, Mastercard o American Express.']);
-        }
+        $marca = static::marca($numero) ?? 'Tarjeta';
 
         if (! preg_match('/^(0[1-9]|1[0-2])\/?(\d{2})$/', trim($vencimiento), $m)) {
             throw ValidationException::withMessages(['tarjeta_vencimiento' => 'Escribe la fecha de vencimiento como MM/AA.']);
@@ -44,9 +41,8 @@ class PagoSimulado
             throw ValidationException::withMessages(['tarjeta_vencimiento' => 'La tarjeta está vencida.']);
         }
 
-        $digitosCvv = $marca === 'American Express' ? 4 : 3;
-        if (! preg_match('/^\d{' . $digitosCvv . '}$/', $cvv)) {
-            throw ValidationException::withMessages(['tarjeta_cvv' => "El código de seguridad debe tener {$digitosCvv} dígitos."]);
+        if (! preg_match('/^\d{3,4}$/', $cvv)) {
+            throw ValidationException::withMessages(['tarjeta_cvv' => 'El código de seguridad debe tener 3 o 4 dígitos.']);
         }
 
         if ($numero === self::TARJETA_RECHAZADA) {

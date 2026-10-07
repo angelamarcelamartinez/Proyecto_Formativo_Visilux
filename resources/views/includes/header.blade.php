@@ -45,9 +45,6 @@
                 <li class="nav-item">
                     <a class="nav-link {{ request()->routeIs('conocenos*') ? 'active' : '' }}" href="{{ route('conocenos') }}">Conócenos</a>
                 </li>
-                <li class="nav-item">
-                    <a class="nav-link {{ request()->routeIs('planes') ? 'active' : '' }}" href="{{ route('planes') }}">Planes</a>
-                </li>
             </ul>
 
             <div class="d-flex align-items-center gap-3">

@@ -8,34 +8,12 @@ use App\Support\Licencias;
 use App\Support\RegistroOptica;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\View\View;
 
+/**
+ * Aprobar o rechazar las solicitudes de plan. Los botones están en el Panel general.
+ */
 class LicenciaController extends Controller
 {
-    /**
-     * Solicitudes pendientes arriba e historial de todas las licencias abajo.
-     */
-    public function index(Request $request): View
-    {
-        Licencias::marcarVencidas();
-
-        $estado = $request->get('estado', 'todas');
-
-        $pendientes = Licencia::with(['empresa', 'plan'])
-            ->where('estado', 'pendiente')
-            ->orderBy('fecha_solicitud')
-            ->get();
-
-        $historial = Licencia::with(['empresa', 'plan'])
-            ->where('estado', '<>', 'pendiente')
-            ->when($estado !== 'todas', fn ($q) => $q->where('estado', $estado))
-            ->orderByDesc('fecha_solicitud')
-            ->paginate(20)
-            ->withQueryString();
-
-        return view('superadmin.licencias.index', compact('pendientes', 'historial', 'estado'));
-    }
-
     public function aprobar(Request $request, int $id): RedirectResponse
     {
         $data = $request->validate([
@@ -47,17 +25,26 @@ class LicenciaController extends Controller
         $referencia = $data['referencia_pago'] ?? null;
         $valor = isset($data['valor']) ? (float) $data['valor'] : null;
 
-        // Óptica nueva registrada desde /planes: se activa y se le envían las credenciales.
+        // Óptica nueva registrada desde /planes: se activa y se envían las credenciales al correo de la óptica.
         if ($licencia->empresa->estaPendiente()) {
+            // Antes de activar una óptica nueva hay que verificar su NIT con la Cámara de Comercio:
+            // el superadmin revisa el PDF y lo confirma en la ventana emergente (casilla "confirmo").
+            if (! $licencia->empresa->tieneCamara()) {
+                return back()->withErrors(['general' => "{$licencia->empresa->nombre} no tiene certificado de la Cámara de Comercio cargado: edita la óptica y adjunta el PDF antes de aprobar."]);
+            }
+            if (! $request->boolean('confirmo')) {
+                return back()->withErrors(['general' => "Antes de aprobar, revisa el certificado y confirma que verificaste el NIT de {$licencia->empresa->nombre} con la Cámara de Comercio (botón «Verificar NIT y aprobar»)."]);
+            }
+
             $acceso = RegistroOptica::aprobar($licencia, $referencia, $valor);
 
             if ($acceso['enviado']) {
                 return back()->with('success', "Registro aprobado: {$licencia->empresa->nombre} ya está activa. "
-                    . "Enviamos la contraseña a {$acceso['correo']}.");
+                    . "Enviamos la contraseña temporal al correo de la óptica ({$acceso['correo']}); el administrador entra con {$acceso['usuario']}.");
             }
 
             return back()->with('success', "Registro aprobado: {$licencia->empresa->nombre} ya está activa, pero no se pudo enviar el correo. "
-                . "Entrégale estos datos al administrador: correo {$acceso['correo']}, contraseña {$acceso['password']}");
+                . "Entrégale estos datos al administrador: usuario {$acceso['usuario']}, contraseña temporal {$acceso['password']}");
         }
 
         $licencia = Licencias::aprobar($licencia, $referencia, $valor);

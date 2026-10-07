@@ -18,7 +18,7 @@ class ControlController extends Controller
         $dias = (int) $request->get('dias', 30);
         $dias = max(7, min($dias, 180));
 
-        $pacientes = ControlReminder::proximos($dias)->map(function ($p) {
+        $pacientes = ControlReminder::proximos($dias, \App\Support\Alcance::nit() ?? '')->map(function ($p) {
             $p->recordatorio_enviado = Cache::has($this->cacheKey($p->documento, $p->fecha_aniversario->year));
 
             return $p;
@@ -33,7 +33,7 @@ class ControlController extends Controller
     public function enviar(Request $request, string $documento): RedirectResponse
     {
         $dias = (int) $request->get('dias', 30);
-        $paciente = ControlReminder::proximos($dias)->firstWhere('documento', (int) $documento);
+        $paciente = ControlReminder::proximos($dias, \App\Support\Alcance::nit() ?? '')->firstWhere('documento', (int) $documento);
 
         if (! $paciente) {
             return back()->withErrors([
@@ -53,7 +53,7 @@ class ControlController extends Controller
     public function enviarTodos(Request $request): RedirectResponse
     {
         $dias = (int) $request->get('dias', 30);
-        $pacientes = ControlReminder::proximos($dias);
+        $pacientes = ControlReminder::proximos($dias, \App\Support\Alcance::nit() ?? '');
 
         $enviados = 0;
         $fallidos = 0;

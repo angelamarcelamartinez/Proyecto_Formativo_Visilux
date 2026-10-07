@@ -53,7 +53,7 @@ class DashboardController extends Controller
 
         // 5) Pacientes próximos a cumplir un año desde su última cita
         //    (candidatos a recibir el recordatorio de control)
-        $controlesPendientes = ControlReminder::proximos(30)->count();
+        $controlesPendientes = ControlReminder::proximos(30, Auth::user()->nit_empresa ?? '')->count();
 
         // --- Lista de citas con filtro de rango: día / semana / mes ---
         $rango = $request->get('rango', 'dia');
@@ -100,7 +100,7 @@ class DashboardController extends Controller
             'controlesPendientes' => $controlesPendientes,
             'citasLista' => $citasLista,
             'rango' => $rango,
-            'totalTablas' => count(config('admin_tables.tables')),
+            'totalTablas' => count(config('admin_tables.tables')) - count(\App\Support\Alcance::OCULTAS),
             'usuario' => Auth::user(),
         ]);
     }

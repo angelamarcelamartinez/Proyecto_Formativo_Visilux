@@ -38,22 +38,13 @@
                 @include('partials.icon', ['name' => 'pencil', 'class' => 'w-4 h-4'])
                 Editar datos
             </a>
-            @unless ($empresa->estaPendiente())
-                @include('superadmin.partials.boton-estado', ['nit' => $empresa->nit, 'nombre' => $empresa->nombre, 'suspendida' => $empresa->estaSuspendida()])
-            @endunless
         </div>
     </div>
 
     @if ($empresa->estaPendiente())
         <div class="mb-6 rounded-xl border border-sky-200 bg-sky-50 text-sky-800 px-4 py-3 text-sm flex flex-wrap items-center justify-between gap-3">
             <span>Esta óptica se registró desde la página de planes y espera que apruebes su pago. Su administrador todavía no puede entrar.</span>
-            <a href="{{ route('superadmin.licencias.index') }}" class="font-semibold underline underline-offset-2">Ir a pagos por aprobar</a>
-        </div>
-    @endif
-
-    @if ($empresa->estaSuspendida())
-        <div class="mb-6 rounded-xl border border-stone-300 bg-stone-100 text-stone-700 px-4 py-3 text-sm">
-            Esta óptica está suspendida: su equipo no puede entrar al panel y su página pública no se muestra, aunque tenga días de licencia.
+            <a href="{{ route('superadmin.dashboard') }}" class="font-semibold underline underline-offset-2">Ir a pagos por aprobar</a>
         </div>
     @endif
 
@@ -168,11 +159,8 @@
                                     <td class="py-3 pr-4 whitespace-nowrap text-ink/70">{{ $lic->fecha_solicitud?->format('d/m/Y') }}</td>
                                     <td class="py-3 pr-6">
                                         @include('partials.estado-licencia', ['estado' => $lic->estado, 'solo' => 'estado'])
-                                        @if ($lic->estado === 'pendiente' && ! $empresa->estaPendiente())
-                                            <form method="POST" action="{{ route('superadmin.licencias.aprobar', $lic->id_licencia) }}" class="inline ml-2">
-                                                @csrf
-                                                <button class="text-[11px] font-semibold text-olive-700 hover:underline">Aprobar</button>
-                                            </form>
+                                        @if ($lic->estado === 'pendiente')
+                                            <a href="{{ route('superadmin.dashboard') }}" class="text-[11px] font-semibold text-olive-700 hover:underline ml-2">Aprobar en el Panel</a>
                                         @endif
                                     </td>
                                 </tr>
@@ -210,6 +198,19 @@
                         </dd>
                     </div>
                 </dl>
+            </div>
+
+            {{-- Verificación del NIT con la Cámara de Comercio --}}
+            <div class="bg-white rounded-2xl border border-olive-100 shadow-card p-5 sm:p-6">
+                <h3 class="font-serif text-lg mb-1">Cámara de Comercio</h3>
+                <p class="text-sm text-muted mb-4">
+                    {{ $empresa->tieneCamara() ? 'Certificado cargado. Ábrelo para revisarlo.' : 'Sin certificado cargado.' }}
+                </p>
+                @if ($empresa->tieneCamara())
+                    @include('superadmin.partials.modal-camara', ['empresa' => $empresa])
+                @else
+                    <a href="{{ route('superadmin.empresas.edit', $empresa->nit) }}" class="text-sm font-medium text-olive-700 hover:underline">Adjuntar certificado (PDF)</a>
+                @endif
             </div>
 
             <div class="bg-white rounded-2xl border border-olive-100 shadow-card p-5 sm:p-6">

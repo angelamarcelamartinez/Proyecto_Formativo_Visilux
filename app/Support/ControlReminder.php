@@ -17,12 +17,18 @@ class ControlReminder
      * Pacientes cuya última cita está por cumplir un año dentro de la
      * ventana de días indicada (por defecto, el próximo mes).
      */
-    public static function proximos(int $diasVentana = 30): Collection
+    public static function proximos(int $diasVentana = 30, ?string $nit = null): Collection
     {
         $hoy = Carbon::today();
         $limite = $hoy->copy()->addDays($diasVentana);
 
-        $ultimasCitas = DB::table('asignacion_cita')
+        // Con $nit solo se consideran los pacientes de esa óptica (panel de administración).
+        $consultaCitas = DB::table('asignacion_cita');
+        if ($nit !== null) {
+            $consultaCitas->where('asignacion_cita.nit_empresa', $nit);
+        }
+
+        $ultimasCitas = $consultaCitas
             ->select('id_usuario', DB::raw('MAX(fecha_cita) as ultima_cita'))
             ->groupBy('id_usuario')
             ->get()

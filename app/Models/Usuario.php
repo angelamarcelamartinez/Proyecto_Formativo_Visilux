@@ -59,6 +59,18 @@ class Usuario extends Authenticatable
         $this->notify(new \App\Notifications\RestablecerContrasena($token));
     }
 
+    /**
+     * Un administrador cuya óptica ya fue aprobada pero que todavía no ha elegido su
+     * contraseña conserva el estado "Pendiente" (id_estado 3): entra con la temporal
+     * y está obligado a cambiarla. Al cambiarla pasa a "Activo" (id_estado 1).
+     * Así no hace falta ninguna columna extra en la base de datos.
+     */
+    public function getDebeCambiarPasswordAttribute(): bool
+    {
+        return (int) $this->id_rol === (int) config('visioptica.rol_admin')
+            && (int) $this->id_estado === 3;
+    }
+
     public function esAdministrador(): bool
     {
         return (int) $this->id_rol === 1;

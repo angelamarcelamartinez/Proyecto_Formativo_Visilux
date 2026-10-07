@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Plan;
+use App\Support\CamaraComercio;
 use App\Support\PagoSimulado;
 use App\Support\RegistroOptica;
 use Illuminate\Http\RedirectResponse;
@@ -50,17 +51,20 @@ class ContratarController extends Controller
             // En la tabla usuario el teléfono es único, por eso se valida aparte del de la óptica.
             'admin_telefono' => ['required', 'string', 'max:20', 'unique:usuario,telefono'],
             'acepto' => ['accepted'],
-        ], $reglasPago), [
+            // Certificado de existencia y representación legal (Cámara de Comercio)
+            'camara_comercio' => CamaraComercio::reglas(),
+        ], $reglasPago), array_merge(CamaraComercio::mensajes(), [
             'nit.unique' => 'Ya hay una óptica registrada con ese NIT.',
             'admin_email.unique' => 'Ese correo ya tiene una cuenta. Usa otro para el administrador.',
             'admin_documento.unique' => 'Ya existe un usuario con ese documento.',
             'admin_telefono.unique' => 'Ya existe un usuario con ese celular.',
             'acepto.accepted' => 'Debes aceptar los términos para continuar.',
-        ], [
+        ]), [
             'nombre' => 'nombre de la óptica', 'nit' => 'NIT', 'email' => 'correo de la óptica',
             'admin_documento' => 'documento', 'admin_nombres' => 'nombres', 'admin_apellido' => 'apellidos',
             'admin_email' => 'correo del administrador', 'admin_telefono' => 'celular', 'tarjeta_titular' => 'nombre en la tarjeta',
             'tarjeta_numero' => 'número de la tarjeta', 'tarjeta_vencimiento' => 'vencimiento', 'tarjeta_cvv' => 'CVV',
+            'camara_comercio' => 'certificado de la Cámara de Comercio',
         ]);
 
         // Primero se "cobra"; si la tarjeta falla no se crea nada.
@@ -71,13 +75,22 @@ class ContratarController extends Controller
             )
             : null;
 
-        $empresa = RegistroOptica::registrar($datos, $plan, $pago);
+        // El PDF se guarda en una carpeta privada; si algo falla al registrar, se borra.
+        $rutaCamara = CamaraComercio::guardar($request->file('camara_comercio'), $datos['nit']);
+
+        try {
+            $empresa = RegistroOptica::registrar($datos, $plan, $pago, $rutaCamara);
+        } catch (\Throwable $e) {
+            CamaraComercio::borrar($rutaCamara);
+            throw $e;
+        }
 
         return redirect()->route('contratar.enviado')->with('registro', [
             'empresa' => $empresa->nombre,
             'plan' => $plan->nombre,
             'valor' => $plan->precioFormateado(),
-            'correo' => $datos['admin_email'],
+            'correo' => $datos['email'],
+            'usuario' => $datos['admin_email'],
             'pago' => $pago,
         ]);
     }

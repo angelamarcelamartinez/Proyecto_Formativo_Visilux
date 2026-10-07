@@ -6,36 +6,86 @@
 @section('content')
 
     @php
-        $hora = now()->format('G');
-        $saludo = $hora < 12 ? 'Buenos días' : ($hora < 19 ? 'Buenas tardes' : 'Buenas noches');
-        $nombre = \Illuminate\Support\Str::of($usuario->nombres ?? 'Superadmin')->explode(' ')->first();
-
         $dinero = fn ($v) => $v >= 1000000
             ? '$' . number_format($v / 1000000, 1, ',', '.') . 'M'
             : '$' . number_format($v, 0, ',', '.');
 
-        $iniciales = fn ($n) => \Illuminate\Support\Str::of($n ?? '?')->explode(' ')->filter()
-            ->map(fn ($p) => mb_strtoupper(mb_substr($p, 0, 1)))->take(2)->implode('');
+        $dineroCompleto = fn ($v) => '$' . number_format((float) $v, 0, ',', '.');
+        $campo = 'bg-creamdark/40 border border-olive-100 rounded-lg py-2 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-olive-300';
     @endphp
 
-    {{-- Hero --}}
-    <div class="relative rounded-3xl overflow-hidden mb-8 bg-ink text-cream">
-        <div class="absolute inset-0 opacity-25 bg-[radial-gradient(circle_at_80%_20%,#93762E,transparent_55%)]"></div>
-        <div class="relative px-6 sm:px-10 py-10 flex flex-col md:flex-row md:items-center md:justify-between gap-6">
-            <div>
-                <p class="text-[11px] uppercase tracking-[0.2em] text-olive-300">Panel general &middot; VisiOptica</p>
-                <h1 class="font-serif text-3xl sm:text-4xl mt-3">{{ $saludo }}, {{ $nombre }}</h1>
-                <p class="mt-3 text-sm text-cream/70 max-w-lg leading-relaxed">
-                    Controla las {{ $totalOpticas }} {{ $totalOpticas === 1 ? 'óptica registrada' : 'ópticas registradas' }}:
-                    sus planes, los días que les quedan de licencia y los pagos por aprobar.
-                </p>
-            </div>
-            <a href="{{ route('superadmin.empresas.create') }}"
-               class="inline-flex items-center justify-center gap-2 bg-olive-500 hover:bg-olive-600 transition text-cream text-sm font-medium px-5 py-3 rounded-xl shadow-lg shrink-0">
-                @include('partials.icon', ['name' => 'plus', 'class' => 'w-4 h-4'])
-                Registrar óptica
-            </a>
+    <div class="flex items-end justify-between flex-wrap gap-4 mb-6">
+        <div>
+            <h1 class="font-serif text-2xl">Panel general</h1>
+            <p class="text-sm text-muted">Aprueba los pagos de las ópticas y revisa las cifras clave de VisiOptica.</p>
         </div>
+        <a href="{{ route('superadmin.empresas.create') }}"
+           class="inline-flex items-center gap-2 bg-olive-600 hover:bg-olive-700 transition text-cream text-sm font-medium px-4 py-2.5 rounded-xl shadow-card">
+            @include('partials.icon', ['name' => 'plus', 'class' => 'w-4 h-4'])
+            Registrar óptica
+        </a>
+    </div>
+
+    {{-- Pagos por aprobar --}}
+    <div class="bg-white rounded-2xl border border-olive-100 shadow-card overflow-hidden mb-8">
+        <div class="px-5 sm:px-6 pt-5 pb-4 border-b border-olive-100 flex items-center gap-3">
+            <div class="w-9 h-9 rounded-xl bg-sky-50 text-sky-700 flex items-center justify-center">
+                @include('partials.icon', ['name' => 'receipt', 'class' => 'w-4.5 h-4.5'])
+            </div>
+            <div>
+                <h3 class="font-serif text-lg leading-tight flex items-center gap-2">
+                    Pagos por aprobar
+                    <span class="text-[11px] font-sans font-semibold rounded-full px-2 py-0.5 tabular-nums
+                                 {{ $pendientes->count() > 0 ? 'bg-amber-100 text-amber-700' : 'bg-creamdark text-olive-700' }}">{{ $pendientes->count() }}</span>
+                </h3>
+                <p class="text-xs text-muted">Al aprobar, el plan empieza hoy o cuando termine el que la óptica ya tiene.</p>
+            </div>
+        </div>
+
+        @forelse ($pendientes as $lic)
+            <div class="px-5 sm:px-6 py-4 border-b border-olive-100 last:border-b-0 flex flex-col lg:flex-row lg:items-center gap-4">
+                <div class="lg:w-72 shrink-0">
+                    <a href="{{ route('superadmin.empresas.show', $lic->nit_empresa) }}" class="font-medium hover:text-olive-700">
+                        {{ $lic->empresa->nombre ?? $lic->nit_empresa }}
+                    </a>
+                    <p class="text-xs text-muted">
+                        {{ $lic->plan->nombre ?? 'Plan' }} · {{ $dineroCompleto($lic->valor) }} · pedida el {{ $lic->fecha_solicitud?->format('d/m/Y') }}
+                    </p>
+                    @if ($lic->empresa?->estaPendiente())
+                        <span class="inline-block mt-1 text-[10px] font-semibold uppercase text-sky-700 bg-sky-50 rounded px-1.5 py-0.5">Óptica nueva</span>
+                        <p class="text-[11px] text-muted mt-1">{{ $lic->observaciones }}</p>
+                        <p class="text-[11px] text-muted">Ref. {{ $lic->referencia_pago }}</p>
+                    @endif
+                </div>
+
+                @if ($lic->empresa?->estaPendiente())
+                    {{-- Óptica nueva: primero se verifica el NIT con la Cámara de Comercio (ventana emergente) --}}
+                    <div class="flex flex-wrap items-center gap-3 flex-1">
+                        <p class="text-xs text-muted flex-1 min-w-[10rem]">
+                            Revisa el certificado de la Cámara de Comercio y confirma el NIT para aprobar. Se envía una contraseña temporal al correo de la óptica ({{ $lic->empresa->email }}); el administrador entra con su propio correo y debe cambiarla.
+                        </p>
+                        @include('superadmin.partials.modal-camara', ['empresa' => $lic->empresa, 'licencia' => $lic])
+                    </div>
+                @else
+                    <form method="POST" action="{{ route('superadmin.licencias.aprobar', $lic->id_licencia) }}" class="flex flex-wrap items-center gap-2 flex-1">
+                        @csrf
+                        <input type="text" name="referencia_pago" placeholder="Referencia del pago" class="{{ $campo }} flex-1 min-w-[10rem]">
+                        <input type="number" name="valor" min="0" step="1" value="{{ (int) $lic->valor }}" title="Valor recibido" class="{{ $campo }} w-32">
+                        <button type="submit" class="bg-olive-600 hover:bg-olive-700 transition text-cream text-sm font-medium px-4 py-2 rounded-lg">Aprobar pago</button>
+                    </form>
+                @endif
+
+                <form method="POST" action="{{ route('superadmin.licencias.rechazar', $lic->id_licencia) }}"
+                      onsubmit="return confirm('{{ $lic->empresa?->estaPendiente()
+                          ? '¿Rechazar el registro de ' . addslashes($lic->empresa->nombre) . '? Se borrarán la óptica y su administrador.'
+                          : '¿Rechazar la solicitud de ' . addslashes($lic->empresa->nombre ?? '') . '?' }}')">
+                    @csrf
+                    <button type="submit" class="text-sm font-medium text-rose-600 hover:text-rose-800 px-2 py-2">Rechazar</button>
+                </form>
+            </div>
+        @empty
+            <div class="px-6 py-10 text-center text-sm text-muted">No hay pagos por aprobar.</div>
+        @endforelse
     </div>
 
     {{-- Tarjetas de resumen --}}
@@ -64,19 +114,14 @@
                 'link' => route('superadmin.empresas.index', ['estado' => 'vencida']),
             ],
             [
-                'icon' => 'x', 'value' => $suspendidas, 'label' => 'Suspendidas',
-                'hint' => 'Bloqueo manual', 'tone' => 'bg-stone-100 text-stone-600', 'bar' => 'bg-stone-400',
-                'link' => route('superadmin.empresas.index', ['estado' => 'suspendida']),
-            ],
-            [
                 'icon' => 'receipt', 'value' => $dinero($ingresosMes), 'label' => 'Ingresos del mes',
                 'hint' => 'Pagos aprobados', 'tone' => 'bg-sky-50 text-sky-700', 'bar' => 'bg-sky-500',
-                'link' => route('superadmin.licencias.index'),
+                'link' => route('superadmin.reportes.index') . '#ingresos',
             ],
         ];
     @endphp
 
-    <div class="grid grid-cols-2 lg:grid-cols-3 2xl:grid-cols-6 gap-4 sm:gap-5 mb-8">
+    <div class="grid grid-cols-2 lg:grid-cols-3 2xl:grid-cols-5 gap-4 sm:gap-5">
         @foreach ($stats as $stat)
             <a href="{{ $stat['link'] }}"
                class="group relative overflow-hidden bg-white rounded-2xl border border-olive-100 shadow-card p-5 sm:p-6 flex flex-col
@@ -107,259 +152,4 @@
         @endforeach
     </div>
 
-    <div class="grid xl:grid-cols-3 gap-6 mb-6">
-
-        {{-- Ópticas --}}
-        <div class="xl:col-span-2 bg-white rounded-2xl border border-olive-100 shadow-card overflow-hidden">
-            <div class="px-5 sm:px-6 pt-5 sm:pt-6 pb-4 flex items-center justify-between flex-wrap gap-3 border-b border-olive-100">
-                <div class="flex items-center gap-3">
-                    <div class="w-9 h-9 rounded-xl bg-olive-100 text-olive-700 flex items-center justify-center">
-                        @include('partials.icon', ['name' => 'building', 'class' => 'w-4.5 h-4.5'])
-                    </div>
-                    <div>
-                        <h3 class="font-serif text-lg leading-tight flex items-center gap-2">
-                            Ópticas
-                            <span class="text-[11px] font-sans font-semibold bg-creamdark text-olive-700 rounded-full px-2 py-0.5 tabular-nums">{{ $opticas->count() }}</span>
-                        </h3>
-                        <p class="text-xs text-muted">Plan actual y días de licencia</p>
-                    </div>
-                </div>
-                <a href="{{ route('superadmin.empresas.index') }}"
-                   class="shrink-0 inline-flex items-center gap-1 text-xs font-semibold text-olive-600 hover:text-olive-800 transition">
-                    Ver todas <span aria-hidden="true">→</span>
-                </a>
-            </div>
-
-            @if ($opticas->isEmpty())
-                <div class="px-6 py-14 text-center">
-                    <p class="font-serif text-lg">Aún no hay ópticas</p>
-                    <p class="text-sm text-muted mt-1">Registra la primera para darle su mes de prueba.</p>
-                </div>
-            @else
-                <div class="overflow-x-auto">
-                    <table class="w-full text-sm">
-                        <thead>
-                            <tr class="bg-cream text-left text-[11px] uppercase tracking-wider text-muted">
-                                <th class="py-3 pl-6 pr-4 font-semibold">Óptica</th>
-                                <th class="py-3 pr-4 font-semibold">Plan</th>
-                                <th class="py-3 pr-4 font-semibold">Vence</th>
-                                <th class="py-3 pr-4 font-semibold">Días</th>
-                                <th class="py-3 pr-4 font-semibold">Estado</th>
-                                <th class="py-3 pr-6 font-semibold text-right">Acciones</th>
-                            </tr>
-                        </thead>
-                        <tbody class="divide-y divide-olive-100">
-                            @foreach ($opticas->take(10) as $o)
-                                <tr class="hover:bg-cream/70 transition">
-                                    <td class="py-3 pl-6 pr-4">
-                                        <a href="{{ route('superadmin.empresas.show', $o->nit) }}" class="flex items-center gap-3 group">
-                                            <div class="w-8 h-8 rounded-full bg-olive-50 text-olive-700 ring-1 ring-olive-100 flex items-center justify-center text-[11px] font-semibold shrink-0">
-                                                {{ $iniciales($o->empresa) }}
-                                            </div>
-                                            <div class="min-w-0">
-                                                <p class="font-medium whitespace-nowrap group-hover:text-olive-700">{{ $o->empresa }}</p>
-                                                <p class="text-[11px] text-muted">NIT {{ $o->nit }} · {{ $o->usuarios_registrados }} usuarios</p>
-                                            </div>
-                                        </a>
-                                    </td>
-                                    <td class="py-3 pr-4 whitespace-nowrap text-ink/80">{{ $o->plan ?? '—' }}</td>
-                                    <td class="py-3 pr-4 whitespace-nowrap text-ink/80 tabular-nums">
-                                        {{ $o->fecha_fin ? \Illuminate\Support\Carbon::parse($o->fecha_fin)->format('d/m/Y') : '—' }}
-                                    </td>
-                                    <td class="py-3 pr-4">
-                                        @include('partials.estado-licencia', ['dias' => $o->dias_restantes !== null ? (int) $o->dias_restantes : null, 'solo' => 'dias'])
-                                    </td>
-                                    <td class="py-3 pr-4">
-                                        @include('partials.estado-licencia', ['estado' => $o->estado_licencia, 'solo' => 'estado'])
-                                        @if ($o->solicitudes_pendientes > 0 && $o->estado_empresa !== 'pendiente')
-                                            <span class="block text-[11px] text-sky-700 mt-1">Solicitud pendiente</span>
-                                        @endif
-                                    </td>
-                                    <td class="py-3 pr-6">
-                                        <div class="flex items-center justify-end gap-1">
-                                            <a href="{{ route('superadmin.empresas.show', $o->nit) }}" title="Ver detalle"
-                                               class="p-2 rounded-lg text-ink/60 hover:bg-olive-100 hover:text-olive-700 transition">
-                                                @include('partials.icon', ['name' => 'eye', 'class' => 'w-4 h-4'])
-                                            </a>
-                                            @if ($o->estado_empresa !== 'pendiente')
-                                                @include('superadmin.partials.boton-estado', ['nit' => $o->nit, 'nombre' => $o->empresa, 'suspendida' => $o->estado_empresa === 'suspendida', 'compacto' => true])
-                                            @endif
-                                        </div>
-                                    </td>
-                                </tr>
-                            @endforeach
-                        </tbody>
-                    </table>
-                </div>
-            @endif
-        </div>
-
-        {{-- Columna derecha: solicitudes y alertas --}}
-        <div class="space-y-6">
-
-            <div class="bg-white rounded-2xl border border-olive-100 shadow-card overflow-hidden">
-                <div class="px-5 pt-5 pb-4 border-b border-olive-100 flex items-center gap-3">
-                    <div class="w-9 h-9 rounded-xl bg-sky-50 text-sky-700 flex items-center justify-center">
-                        @include('partials.icon', ['name' => 'receipt', 'class' => 'w-4.5 h-4.5'])
-                    </div>
-                    <div>
-                        <h3 class="font-serif text-lg leading-tight">Pagos por aprobar</h3>
-                        <p class="text-xs text-muted">Solicitudes de plan de las ópticas</p>
-                    </div>
-                </div>
-
-                @forelse ($pendientes as $lic)
-                    <div class="px-5 py-4 border-b border-olive-100 last:border-b-0">
-                        <div class="flex items-start justify-between gap-3">
-                            <div class="min-w-0">
-                                <p class="font-medium text-sm truncate flex items-center gap-2">
-                                    {{ $lic->empresa->nombre ?? $lic->nit_empresa }}
-                                    @if ($lic->empresa?->estaPendiente())
-                                        <span class="text-[10px] font-semibold uppercase text-sky-700 bg-sky-50 rounded px-1.5 py-0.5 shrink-0">Óptica nueva</span>
-                                    @endif
-                                </p>
-                                <p class="text-xs text-muted">
-                                    {{ $lic->plan->nombre ?? 'Plan' }} · {{ $dinero((float) $lic->valor) }}
-                                    · {{ $lic->fecha_solicitud?->locale('es')->diffForHumans() }}
-                                </p>
-                                @if ($lic->empresa?->estaPendiente() && $lic->observaciones)
-                                    <p class="text-[11px] text-muted mt-1">{{ $lic->observaciones }} · Ref. {{ $lic->referencia_pago }}</p>
-                                @endif
-                            </div>
-                        </div>
-                        <form method="POST" action="{{ route('superadmin.licencias.aprobar', $lic->id_licencia) }}" class="mt-3 flex gap-2">
-                            @csrf
-                            @if ($lic->empresa?->estaPendiente())
-                                <button type="submit" class="flex-1 bg-olive-600 hover:bg-olive-700 transition text-cream text-xs font-medium px-3 py-1.5 rounded-lg">Aprobar y enviar acceso</button>
-                            @else
-                                <input type="text" name="referencia_pago" placeholder="Referencia del pago"
-                                       class="flex-1 min-w-0 bg-creamdark/40 border border-olive-100 rounded-lg py-1.5 px-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-olive-300">
-                                <button type="submit" class="bg-olive-600 hover:bg-olive-700 transition text-cream text-xs font-medium px-3 py-1.5 rounded-lg">Aprobar</button>
-                            @endif
-                        </form>
-                        <form method="POST" action="{{ route('superadmin.licencias.rechazar', $lic->id_licencia) }}" class="mt-1.5"
-                              onsubmit="return confirm('{{ $lic->empresa?->estaPendiente()
-                                  ? '¿Rechazar el registro de ' . addslashes($lic->empresa->nombre) . '? Se borrarán la óptica y su administrador.'
-                                  : '¿Rechazar la solicitud de ' . addslashes($lic->empresa->nombre ?? '') . '?' }}')">
-                            @csrf
-                            <button type="submit" class="text-[11px] text-rose-600 hover:text-rose-800 font-medium">Rechazar solicitud</button>
-                        </form>
-                    </div>
-                @empty
-                    <div class="px-5 py-8 text-center text-sm text-muted">No hay pagos por aprobar.</div>
-                @endforelse
-            </div>
-
-            <div class="bg-white rounded-2xl border border-olive-100 shadow-card overflow-hidden">
-                <div class="px-5 pt-5 pb-4 border-b border-olive-100 flex items-center gap-3">
-                    <div class="w-9 h-9 rounded-xl bg-amber-50 text-amber-700 flex items-center justify-center">
-                        @include('partials.icon', ['name' => 'clock', 'class' => 'w-4.5 h-4.5'])
-                    </div>
-                    <div class="flex-1">
-                        <h3 class="font-serif text-lg leading-tight">Requieren atención</h3>
-                        <p class="text-xs text-muted">Por vencer, vencidas o sin plan</p>
-                    </div>
-                    <form method="POST" action="{{ route('superadmin.avisos') }}">
-                        @csrf
-                        <button type="submit" title="Envía el correo de vencimiento a las ópticas a las que les toca hoy"
-                                class="inline-flex items-center gap-1.5 text-xs font-semibold text-olive-700 hover:text-olive-800 bg-olive-50 hover:bg-olive-100 rounded-lg px-2.5 py-1.5 transition">
-                            @include('partials.icon', ['name' => 'mail', 'class' => 'w-3.5 h-3.5'])
-                            Enviar avisos
-                        </button>
-                    </form>
-                </div>
-
-                @forelse ($alertas->take(6) as $o)
-                    <a href="{{ route('superadmin.empresas.show', $o->nit) }}"
-                       class="px-5 py-3 flex items-center justify-between gap-3 border-b border-olive-100 last:border-b-0 hover:bg-cream/70 transition">
-                        <div class="min-w-0">
-                            <p class="font-medium text-sm truncate">{{ $o->empresa }}</p>
-                            <p class="text-xs text-muted">{{ $o->plan ?? 'Sin plan' }}</p>
-                        </div>
-                        @include('partials.estado-licencia', ['dias' => $o->dias_restantes !== null ? (int) $o->dias_restantes : null, 'solo' => 'dias'])
-                    </a>
-                @empty
-                    <div class="px-5 py-8 text-center text-sm text-muted">Todas las ópticas están al día.</div>
-                @endforelse
-            </div>
-        </div>
-    </div>
-
-    <div class="grid xl:grid-cols-3 gap-6">
-
-        {{-- Ingresos --}}
-        <div class="xl:col-span-2 bg-white rounded-2xl border border-olive-100 shadow-card p-5 sm:p-6">
-            <div class="flex items-center gap-3 mb-4">
-                <div class="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center">
-                    @include('partials.icon', ['name' => 'receipt', 'class' => 'w-4.5 h-4.5'])
-                </div>
-                <div>
-                    <h3 class="font-serif text-lg leading-tight">Ingresos por licencias</h3>
-                    <p class="text-xs text-muted">Pagos aprobados en los últimos 6 meses</p>
-                </div>
-            </div>
-            <div class="h-64"><canvas id="graficaIngresos"></canvas></div>
-        </div>
-
-        {{-- Actividad --}}
-        <div class="bg-white rounded-2xl border border-olive-100 shadow-card overflow-hidden">
-            <div class="px-5 pt-5 pb-4 border-b border-olive-100 flex items-center gap-3">
-                <div class="w-9 h-9 rounded-xl bg-olive-100 text-olive-700 flex items-center justify-center">
-                    @include('partials.icon', ['name' => 'file-text', 'class' => 'w-4.5 h-4.5'])
-                </div>
-                <div>
-                    <h3 class="font-serif text-lg leading-tight">Actividad reciente</h3>
-                    <p class="text-xs text-muted">En todas las ópticas</p>
-                </div>
-            </div>
-            <ul class="divide-y divide-olive-100">
-                @forelse ($actividad as $a)
-                    <li class="px-5 py-3">
-                        <p class="text-sm">{{ $a->descripcion }}</p>
-                        <p class="text-[11px] text-muted mt-0.5">
-                            {{ $a->empresa->nombre ?? 'VisiOptica' }}
-                            @if ($a->usuario) · {{ $a->usuario->nombres }} @endif
-                            · {{ $a->fecha?->locale('es')->diffForHumans() }}
-                        </p>
-                    </li>
-                @empty
-                    <li class="px-5 py-8 text-center text-sm text-muted">Sin actividad registrada.</li>
-                @endforelse
-            </ul>
-        </div>
-    </div>
-
 @endsection
-
-@push('scripts')
-<script>
-    document.addEventListener('DOMContentLoaded', () => {
-        const el = document.getElementById('graficaIngresos');
-        if (!el || typeof Chart === 'undefined') return;
-
-        new Chart(el, {
-            type: 'bar',
-            data: {
-                labels: @json($grafica['labels']),
-                datasets: [{
-                    data: @json($grafica['data']),
-                    backgroundColor: '#93762E',
-                    borderRadius: 8,
-                    maxBarThickness: 48,
-                }],
-            },
-            options: {
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: { display: false },
-                    tooltip: { callbacks: { label: (c) => '$' + Number(c.raw).toLocaleString('es-CO') } },
-                },
-                scales: {
-                    x: { grid: { display: false } },
-                    y: { beginAtZero: true, ticks: { callback: (v) => '$' + Number(v).toLocaleString('es-CO') } },
-                },
-            },
-        });
-    });
-</script>
-@endpush

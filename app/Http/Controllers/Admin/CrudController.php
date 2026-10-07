@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Support\Alcance;
 use App\Http\Controllers\Controller;
 use App\Support\SimpleXlsx;
 use Illuminate\Database\Query\Builder;
@@ -53,7 +54,7 @@ class CrudController extends Controller
     {
         $config = config("admin_tables.tables.{$table}");
 
-        if (! $config) {
+        if (! $config || Alcance::oculta($table)) {
             throw new NotFoundHttpException("La tabla «{$table}» no está registrada en el panel.");
         }
 
@@ -145,7 +146,7 @@ class CrudController extends Controller
     {
         $pac = "CONCAT(u.documento, ' - ', u.nombres, ' ', u.apellido)";
 
-        return match ($fkTable) {
+        $consulta = match ($fkTable) {
             'usuario' => DB::table('usuario')
                 ->selectRaw("usuario.{$fkColumn} as v, CONCAT(usuario.documento, ' - ', usuario.nombres, ' ', usuario.apellido) as l")
                 ->orderBy('usuario.nombres'),
@@ -215,6 +216,13 @@ class CrudController extends Controller
                 ->selectRaw("`{$fkTable}`.`{$fkColumn}` as v, `{$fkTable}`.`{$fkDisplay}` as l")
                 ->orderBy("{$fkTable}.{$fkDisplay}"),
         };
+
+        // Solo se ofrecen registros de la propia óptica (y nunca el rol Superadmin).
+        if ($fkTable === 'rol') {
+            $consulta->where('rol.id_rol', '<>', (int) config('visioptica.rol_superadmin'));
+        }
+
+        return Alcance::restringir($consulta, $fkTable);
     }
 
     /**
@@ -294,6 +302,7 @@ class CrudController extends Controller
     protected function baseQuery(string $table, array $config): Builder
     {
         $query = DB::table($table)->select("{$table}.*");
+        Alcance::restringir($query, $table);
 
         foreach ($config['joins'] ?? [] as $join) {
             $query->leftJoin("{$join['table']} as {$join['as']}", $join['first'], '=', $join['second']);
@@ -507,6 +516,7 @@ class CrudController extends Controller
         $u = DB::table('usuario')
             ->leftJoin('tipo_documento as td', 'td.id_tipo_docu', '=', 'usuario.id_tipo_docu')
             ->where('usuario.documento', $documento)
+            ->tap(fn ($q) => Alcance::restringir($q, 'usuario'))
             ->first(['usuario.documento', 'usuario.nombres', 'usuario.apellido', 'usuario.telefono', 'usuario.email', 'td.nom_ti_docu']);
 
         if (! $u) {
@@ -555,9 +565,15 @@ class CrudController extends Controller
         };
     }
 
+    /** Consulta sobre una tabla ya limitada a la óptica del administrador (para reportes y gráficas). */
+    protected function propia(string $table): Builder
+    {
+        return Alcance::restringir(DB::table($table), $table);
+    }
+
     protected function chartProductosPorCategoria(): array
     {
-        $datos = DB::table('producto')
+        $datos = $this->propia('producto')
             ->join('categoria_producto', 'categoria_producto.id_categoria', '=', 'producto.id_categoria')
             ->selectRaw('categoria_producto.nombre_categoria as categoria, COUNT(*) as total')
             ->groupBy('categoria_producto.nombre_categoria')
@@ -575,7 +591,7 @@ class CrudController extends Controller
 
     protected function chartStockPorCategoria(): array
     {
-        $datos = DB::table('lote')
+        $datos = $this->propia('lote')
             ->join('producto', 'producto.id_producto', '=', 'lote.id_producto')
             ->join('categoria_producto', 'categoria_producto.id_categoria', '=', 'producto.id_categoria')
             ->selectRaw('categoria_producto.nombre_categoria as categoria, SUM(lote.stock_actual) as total')
@@ -596,7 +612,7 @@ class CrudController extends Controller
     {
         $inicio = now()->startOfMonth()->subMonths(5);
 
-        $ventas = DB::table('venta')
+        $ventas = $this->propia('venta')
             ->where('fecha_venta', '>=', $inicio->toDateString())
             ->get(['fecha_venta', 'total']);
 
@@ -619,7 +635,7 @@ class CrudController extends Controller
         $inicio = now()->startOfWeek(); // lunes
         $fin = $inicio->copy()->addDays(5); // sábado
 
-        $citas = DB::table('asignacion_cita')
+        $citas = $this->propia('asignacion_cita')
             ->whereBetween('fecha_cita', [$inicio->toDateString(), $fin->toDateString()])
             ->get(['fecha_cita']);
 
@@ -641,7 +657,7 @@ class CrudController extends Controller
     {
         $hoy = now();
 
-        $datos = DB::table('asignacion_cita')
+        $datos = $this->propia('asignacion_cita')
             ->join('estado', 'estado.id_estado', '=', 'asignacion_cita.id_estado')
             ->whereMonth('asignacion_cita.fecha_cita', $hoy->month)
             ->whereYear('asignacion_cita.fecha_cita', $hoy->year)
@@ -661,12 +677,12 @@ class CrudController extends Controller
 
     protected function reportStatsProducto(): array
     {
-        $total = DB::table('producto')->count();
-        $stockBajo = DB::table('lote')
+        $total = $this->propia('producto')->count();
+        $stockBajo = $this->propia('lote')
             ->whereColumn('stock_actual', '<=', 'stock_minimo')
             ->distinct('id_producto')
             ->count('id_producto');
-        $valorInventario = (float) (DB::table('lote')->selectRaw('SUM(stock_actual * precio_venta) as v')->value('v') ?? 0);
+        $valorInventario = (float) ($this->propia('lote')->selectRaw('SUM(stock_actual * precio_venta) as v')->value('v') ?? 0);
 
         return [
             ['label' => 'Productos registrados', 'value' => number_format($total)],
@@ -677,9 +693,9 @@ class CrudController extends Controller
 
     protected function reportStatsLote(): array
     {
-        $totalUnidades = (int) (DB::table('lote')->sum('stock_actual') ?? 0);
-        $lotesBajos = DB::table('lote')->whereColumn('stock_actual', '<=', 'stock_minimo')->count();
-        $valorInventario = (float) (DB::table('lote')->selectRaw('SUM(stock_actual * precio_venta) as v')->value('v') ?? 0);
+        $totalUnidades = (int) ($this->propia('lote')->sum('stock_actual') ?? 0);
+        $lotesBajos = $this->propia('lote')->whereColumn('stock_actual', '<=', 'stock_minimo')->count();
+        $valorInventario = (float) ($this->propia('lote')->selectRaw('SUM(stock_actual * precio_venta) as v')->value('v') ?? 0);
 
         return [
             ['label' => 'Unidades en stock', 'value' => number_format($totalUnidades)],
@@ -691,12 +707,12 @@ class CrudController extends Controller
     protected function reportStatsVenta(): array
     {
         $hoy = now();
-        $ventasHoy = (float) (DB::table('venta')->whereDate('fecha_venta', $hoy->toDateString())->sum('total') ?? 0);
-        $ventasMes = (float) (DB::table('venta')
+        $ventasHoy = (float) ($this->propia('venta')->whereDate('fecha_venta', $hoy->toDateString())->sum('total') ?? 0);
+        $ventasMes = (float) ($this->propia('venta')
             ->whereMonth('fecha_venta', $hoy->month)
             ->whereYear('fecha_venta', $hoy->year)
             ->sum('total') ?? 0);
-        $numVentasMes = DB::table('venta')
+        $numVentasMes = $this->propia('venta')
             ->whereMonth('fecha_venta', $hoy->month)
             ->whereYear('fecha_venta', $hoy->year)
             ->count();
@@ -712,12 +728,12 @@ class CrudController extends Controller
     protected function reportStatsCitas(): array
     {
         $hoy = now();
-        $citasHoy = DB::table('asignacion_cita')->whereDate('fecha_cita', $hoy->toDateString())->count();
-        $citasMes = DB::table('asignacion_cita')
+        $citasHoy = $this->propia('asignacion_cita')->whereDate('fecha_cita', $hoy->toDateString())->count();
+        $citasMes = $this->propia('asignacion_cita')
             ->whereMonth('fecha_cita', $hoy->month)
             ->whereYear('fecha_cita', $hoy->year)
             ->count();
-        $completadasMes = DB::table('asignacion_cita')
+        $completadasMes = $this->propia('asignacion_cita')
             ->join('estado', 'estado.id_estado', '=', 'asignacion_cita.id_estado')
             ->whereMonth('asignacion_cita.fecha_cita', $hoy->month)
             ->whereYear('asignacion_cita.fecha_cita', $hoy->year)
@@ -757,8 +773,17 @@ class CrudController extends Controller
         return $fkOptions;
     }
 
+    /** Los catálogos compartidos por todas las ópticas no se modifican desde el panel de una óptica. */
+    protected function exigirEscritura(string $table): void
+    {
+        if (Alcance::soloLectura($table)) {
+            throw new NotFoundHttpException('Este catálogo es compartido y solo se puede consultar.');
+        }
+    }
+
     public function create(string $table): View
     {
+        $this->exigirEscritura($table);
         $config = $this->tableConfig($table);
 
         return view('admin.crud.form', [
@@ -772,6 +797,7 @@ class CrudController extends Controller
 
     public function store(Request $request, string $table): RedirectResponse
     {
+        $this->exigirEscritura($table);
         $config = $this->tableConfig($table);
 
         [$rules, $labels] = $this->buildRules($config, isEdit: false, table: $table);
@@ -779,6 +805,12 @@ class CrudController extends Controller
         Validator::make($request->all(), $rules, [], $labels)->validate();
 
         $data = $this->extractData($request, $config, isEdit: false);
+
+        // Todo lo que se crea queda a nombre de la óptica del administrador
+        // (si no, la base de datos lo asignaría a la óptica principal).
+        if (Alcance::tieneNit($table)) {
+            $data['nit_empresa'] = Alcance::nit();
+        }
 
         if ($error = $this->reglasDelNegocio($table, $data)) {
             return back()->withInput()->withErrors($error);
@@ -799,10 +831,11 @@ class CrudController extends Controller
 
     public function edit(string $table, string $id): View
     {
+        $this->exigirEscritura($table);
         $config = $this->tableConfig($table);
         $pk = $config['primary_key'];
 
-        $record = DB::table($table)->where($pk, $id)->first();
+        $record = Alcance::restringir(DB::table($table), $table)->where("{$table}.{$pk}", $id)->first();
         if (! $record) {
             throw new NotFoundHttpException('Registro no encontrado.');
         }
@@ -818,10 +851,11 @@ class CrudController extends Controller
 
     public function update(Request $request, string $table, string $id): RedirectResponse
     {
+        $this->exigirEscritura($table);
         $config = $this->tableConfig($table);
         $pk = $config['primary_key'];
 
-        $exists = DB::table($table)->where($pk, $id)->exists();
+        $exists = Alcance::restringir(DB::table($table), $table)->where("{$table}.{$pk}", $id)->exists();
         if (! $exists) {
             throw new NotFoundHttpException('Registro no encontrado.');
         }
@@ -876,6 +910,24 @@ class CrudController extends Controller
      */
     protected function reglasDelNegocio(string $table, array $data, ?string $id = null): ?array
     {
+        // Las llaves foráneas solo pueden apuntar a registros de la propia óptica.
+        foreach ($this->tableConfig($table)['columns'] as $col) {
+            $valor = $data[$col['name']] ?? null;
+            if (empty($col['is_fk']) || $valor === null || $valor === '') {
+                continue;
+            }
+
+            if ($col['fk_table'] === 'rol' && (int) $valor === (int) config('visioptica.rol_superadmin')) {
+                return [$col['name'] => 'Ese rol no está disponible.'];
+            }
+
+            if (Alcance::aplica($col['fk_table'])
+                && ! Alcance::restringir(DB::table($col['fk_table']), $col['fk_table'])
+                    ->where("{$col['fk_table']}.{$col['fk_column']}", $valor)->exists()) {
+                return [$col['name'] => 'El valor elegido no pertenece a tu óptica.'];
+            }
+        }
+
         if ($table === 'asignacion_cita' && ! empty($data['fecha_cita']) && ! empty($data['hora_cita']) && ! empty($data['id_optometra'])) {
             $cancelado = \App\Support\AgendaCitas::estadoCancelado();
             $esCancelada = $cancelado && (int) ($data['id_estado'] ?? 0) === (int) $cancelado;
@@ -907,8 +959,13 @@ class CrudController extends Controller
 
     public function destroy(string $table, string $id): RedirectResponse
     {
+        $this->exigirEscritura($table);
         $config = $this->tableConfig($table);
         $pk = $config['primary_key'];
+
+        if (! Alcance::restringir(DB::table($table), $table)->where("{$table}.{$pk}", $id)->exists()) {
+            throw new NotFoundHttpException('Registro no encontrado.');
+        }
 
         try {
             DB::table($table)->where($pk, $id)->delete();

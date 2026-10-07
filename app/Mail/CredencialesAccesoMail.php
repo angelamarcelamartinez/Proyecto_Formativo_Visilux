@@ -12,7 +12,8 @@ use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
 
 /**
- * Se envía al administrador de una óptica nueva cuando el superadmin aprueba su pago.
+ * Se envía al correo de la óptica cuando el superadmin aprueba su pago. Trae el usuario
+ * (correo del administrador) y una contraseña temporal que debe cambiar al entrar.
  */
 class CredencialesAccesoMail extends Mailable
 {

@@ -28,7 +28,7 @@
     </div>
 
     <form method="POST" action="{{ $crear ? route('superadmin.empresas.store') : route('superadmin.empresas.update', $empresa->nit) }}"
-          class="max-w-3xl space-y-6">
+          enctype="multipart/form-data" x-data="{ confirmar: false }" class="max-w-3xl space-y-6">
         @csrf
         @unless ($crear) @method('PUT') @endunless
 
@@ -91,6 +91,25 @@
             </div>
         </div>
 
+        {{-- Verificación del NIT: PDF de la Cámara de Comercio --}}
+        <div class="bg-white rounded-2xl border border-olive-100 shadow-card p-6 sm:p-8">
+            <h2 class="font-serif text-lg mb-1">Verificación con la Cámara de Comercio</h2>
+            <p class="text-sm text-muted mb-5">
+                Adjunta el certificado de existencia y representación legal. Al guardar tendrás que confirmar que
+                el NIT {{ $crear ? '' : $empresa->nit . ' ' }}existe en la Cámara de Comercio.
+            </p>
+            <label class="block text-sm font-medium mb-1.5" for="f_camara">Certificado (PDF, máx. 5 MB) <span class="text-red-500">*</span></label>
+            <input id="f_camara" type="file" name="camara_comercio" accept="application/pdf,.pdf" required
+                   class="block w-full text-sm file:mr-4 file:rounded-lg file:border-0 file:bg-olive-100 file:px-4 file:py-2 file:text-sm file:font-medium file:text-olive-700 hover:file:bg-olive-200">
+            @error('camara_comercio') <p class="text-[12px] text-red-600 mt-1">{{ $message }}</p> @enderror
+            @error('confirmo') <p class="text-[12px] text-red-600 mt-1">{{ $message }}</p> @enderror
+            @unless ($crear)
+                @if ($empresa->tieneCamara())
+                    <p class="text-[11px] text-muted mt-2">Ya hay un certificado cargado; el nuevo lo reemplaza.</p>
+                @endif
+            @endunless
+        </div>
+
         @if ($crear)
             <div class="bg-white rounded-2xl border border-olive-100 shadow-card p-6 sm:p-8">
                 <h2 class="font-serif text-lg mb-1">Administrador de la óptica</h2>
@@ -133,10 +152,36 @@
         @endif
 
         <div class="flex items-center gap-3">
-            <button type="submit" class="bg-olive-600 hover:bg-olive-700 transition text-cream text-sm font-medium px-5 py-2.5 rounded-xl shadow-card">
+            {{-- No envía el formulario directo: primero abre la ventana de confirmación --}}
+            <button type="button" @click="if ($el.form.reportValidity()) confirmar = true"
+                    class="bg-olive-600 hover:bg-olive-700 transition text-cream text-sm font-medium px-5 py-2.5 rounded-xl shadow-card">
                 {{ $crear ? 'Registrar óptica' : 'Guardar cambios' }}
             </button>
             <a href="{{ $volver }}" class="text-sm text-muted hover:text-ink px-4 py-2.5">Cancelar</a>
+        </div>
+
+        {{-- Ventana emergente: confirmar la verificación del NIT --}}
+        <div x-show="confirmar" x-cloak x-transition.opacity @keydown.escape.window="confirmar = false"
+             class="fixed inset-0 z-50 flex items-center justify-center bg-ink/60 p-4" role="dialog" aria-modal="true">
+            <div @click.outside="confirmar = false" class="bg-white rounded-2xl shadow-xl w-full max-w-lg p-6">
+                <h3 class="font-serif text-lg mb-1">Confirmar verificación del NIT</h3>
+                <p class="text-sm text-muted mb-4">
+                    Antes de {{ $crear ? 'registrar la óptica' : 'guardar los cambios' }}, compara el PDF que adjuntaste con la Cámara de Comercio
+                    (o el RUES) y confirma que el NIT existe.
+                </p>
+                <label class="flex items-start gap-2 text-sm mb-5">
+                    <input type="checkbox" name="confirmo" value="1" required class="mt-1 rounded border-olive-300">
+                    <span>Verifiqué con la Cámara de Comercio que el NIT
+                        <strong x-text="'{{ $crear ? '' : $empresa->nit }}' || document.getElementById('f_nit')?.value"></strong>
+                        corresponde a una empresa que existe.</span>
+                </label>
+                <div class="flex justify-end gap-2">
+                    <button type="button" @click="confirmar = false" class="text-sm text-muted hover:text-ink px-4 py-2">Volver</button>
+                    <button type="submit" class="bg-olive-600 hover:bg-olive-700 transition text-cream text-sm font-medium px-5 py-2 rounded-lg">
+                        Confirmar y {{ $crear ? 'registrar' : 'guardar' }}
+                    </button>
+                </div>
+            </div>
         </div>
     </form>
 

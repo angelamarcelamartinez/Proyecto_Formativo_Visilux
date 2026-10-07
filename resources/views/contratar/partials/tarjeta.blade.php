@@ -15,7 +15,7 @@
 <div class="aviso-simulado p-3 mb-4">
     <i class="bi bi-info-circle me-1"></i>
     <strong>Pago simulado:</strong> no se hace ningún cobro real y no guardamos el número de tu tarjeta.
-    Para probar usa <code>4242 4242 4242 4242</code>, cualquier fecha futura y cualquier CVV de 3 dígitos.
+    Para probar sirve cualquier número de 16 dígitos, una fecha futura (MM/AA) y cualquier CVV de 3 o 4 dígitos.
     Con <code>4000 0000 0000 0002</code> el pago sale rechazado.
 </div>
 

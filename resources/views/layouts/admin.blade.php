@@ -42,13 +42,6 @@
                 Panel general
             </a>
 
-            <a href="{{ route('admin.pagina.edit') }}"
-               class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition
-                      {{ request()->routeIs('admin.pagina.*') ? 'bg-olive-600 text-cream shadow-card' : 'text-ink/80 hover:bg-olive-100' }}">
-                @include('partials.icon', ['name' => 'pencil', 'class' => 'w-5 h-5 shrink-0'])
-                Mi página
-            </a>
-
             <a href="{{ route('admin.licencia.index') }}"
                class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition
                       {{ request()->routeIs('admin.licencia.*') ? 'bg-olive-600 text-cream shadow-card' : 'text-ink/80 hover:bg-olive-100' }}">
@@ -65,7 +58,7 @@
 
             @foreach (config('admin_tables.groups') as $groupKey => $group)
                 @php
-                    $tablesInGroup = collect(config('admin_tables.tables'))->filter(fn ($t) => $t['group'] === $groupKey);
+                    $tablesInGroup = collect(config('admin_tables.tables'))->except(\App\Support\Alcance::OCULTAS)->filter(fn ($t) => $t['group'] === $groupKey);
                     $isActiveGroup = (request()->routeIs('admin.crud.*') && $tablesInGroup->has(request()->route('table')))
                         || ($groupKey === 'agenda' && request()->routeIs('admin.control.*'));
                 @endphp
@@ -134,7 +127,7 @@
                  x-data="{
                     open: false,
                     q: '',
-                    tables: {{ collect(config('admin_tables.tables'))->map(fn ($t, $k) => ['key' => $k, 'label' => $t['label_plural'], 'group' => $t['group_label']])->values()->toJson() }},
+                    tables: {{ collect(config('admin_tables.tables'))->except(\App\Support\Alcance::OCULTAS)->map(fn ($t, $k) => ['key' => $k, 'label' => $t['label_plural'], 'group' => $t['group_label']])->values()->toJson() }},
                     get results() {
                         if (this.q.length < 1) return [];
                         const needle = this.q.toLowerCase();

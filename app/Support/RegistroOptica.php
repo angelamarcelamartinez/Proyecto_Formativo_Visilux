@@ -19,7 +19,9 @@ use Illuminate\Support\Str;
  *   1. registrar(): se guardan la óptica (estado "pendiente"), su administrador
  *      (sin acceso todavía) y la licencia "pendiente" con los datos del pago simulado.
  *   2. El superadmin la ve en "Pagos por aprobar".
- *   3. aprobar(): se activa todo, se genera la contraseña y se envía por correo.
+ *   3. aprobar(): se activa todo, se genera una contraseña temporal y se envía al correo
+ *      de la ÓPTICA (el usuario es el correo del administrador). En su primer ingreso el
+ *      administrador está obligado a cambiarla.
  *      rechazar(): se borra el registro para que puedan intentarlo de nuevo.
  */
 class RegistroOptica
@@ -32,9 +34,9 @@ class RegistroOptica
      * @param array $datos Datos validados del formulario (óptica y administrador).
      * @param array|null $pago Resultado de PagoSimulado::cobrar(), o null si el plan es gratis.
      */
-    public static function registrar(array $datos, Plan $plan, ?array $pago): Empresa
+    public static function registrar(array $datos, Plan $plan, ?array $pago, ?string $rutaCamara = null): Empresa
     {
-        return DB::transaction(function () use ($datos, $plan, $pago) {
+        return DB::transaction(function () use ($datos, $plan, $pago, $rutaCamara) {
             $empresa = Empresa::create([
                 'nit' => $datos['nit'],
                 'nombre' => $datos['nombre'],
@@ -46,6 +48,8 @@ class RegistroOptica
                 'estado' => 'pendiente',
                 'prueba_usada' => 0,
                 'fecha_registro' => now(),
+                // PDF de la Cámara de Comercio: el superadmin lo revisa y confirma el NIT al aprobar.
+                'camara_comercio' => $rutaCamara,
             ]);
 
             // El administrador queda creado pero sin poder entrar: su contraseña es
@@ -85,9 +89,9 @@ class RegistroOptica
     }
 
     /**
-     * Activa la óptica y su administrador, y le envía las credenciales.
+     * Activa la óptica y su administrador y envía las credenciales al correo de la óptica.
      *
-     * @return array{correo: string, password: string, enviado: bool}
+     * @return array{correo: string, usuario: string, password: string, enviado: bool}
      */
     public static function aprobar(Licencia $licencia, ?string $referencia = null, ?float $valor = null): array
     {
@@ -106,25 +110,28 @@ class RegistroOptica
 
             $admin->update([
                 'password' => Hash::make($password),
-                'id_estado' => self::USUARIO_ACTIVO,
+                // Sigue "Pendiente" hasta que cambie la contraseña temporal en su primer ingreso.
+                'id_estado' => self::USUARIO_PENDIENTE,
             ]);
 
-            Actividad::registrar($empresa->nit, 'licencia', 'Registro aprobado: se enviaron las credenciales al administrador', 'empresa', $empresa->nit);
+            Actividad::registrar($empresa->nit, 'licencia', 'Registro aprobado: se enviaron las credenciales al correo de la óptica', 'empresa', $empresa->nit);
 
             return $admin;
         });
 
         // El correo va por fuera de la transacción: si falla, la óptica igual queda activa
         // y el superadmin ve la contraseña en pantalla para entregarla de otra forma.
+        // Va al correo de la óptica; el usuario para entrar es el correo del administrador.
+        $destino = $empresa->email ?: $admin->email;
         $enviado = true;
         try {
-            Mail::to($admin->email)->send(new CredencialesAccesoMail($empresa->fresh(), $admin, $password, $licencia->fresh('plan')));
+            Mail::to($destino)->send(new CredencialesAccesoMail($empresa->fresh(), $admin, $password, $licencia->fresh('plan')));
         } catch (\Throwable $e) {
             report($e);
             $enviado = false;
         }
 
-        return ['correo' => $admin->email, 'password' => $password, 'enviado' => $enviado];
+        return ['correo' => $destino, 'usuario' => $admin->email, 'password' => $password, 'enviado' => $enviado];
     }
 
     /**

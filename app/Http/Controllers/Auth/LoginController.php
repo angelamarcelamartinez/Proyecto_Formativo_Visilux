@@ -37,6 +37,11 @@ class LoginController extends Controller
             return '/superadmin';
         }
 
+        // Contraseña temporal: primero debe crear la suya.
+        if ($user && $user->debe_cambiar_password) {
+            return '/cambiar-password';
+        }
+
         return ($user && $user->esAdministrador()) ? '/admin' : '/';
     }
 

@@ -34,7 +34,7 @@
 <section class="py-5">
     <div class="container py-2">
 
-        <form method="POST" action="{{ route('contratar.store', $plan->id_plan) }}" novalidate>
+        <form method="POST" action="{{ route('contratar.store', $plan->id_plan) }}" enctype="multipart/form-data" novalidate>
             @csrf
 
             <div class="row g-4">
@@ -86,13 +86,19 @@
                                 <input type="text" id="direccion" name="direccion" value="{{ old('direccion') }}" class="{{ $campo('direccion') }}">
                                 @error('direccion') <span class="invalid-feedback d-block">{{ $message }}</span> @enderror
                             </div>
+                            <div class="col-12">
+                                <label for="camara_comercio" class="form-label fw-medium">Certificado de la Cámara de Comercio <span class="text-muted fw-normal">(PDF, máx. 5 MB)</span></label>
+                                <input type="file" id="camara_comercio" name="camara_comercio" accept="application/pdf,.pdf" class="{{ $campo('camara_comercio') }}" required>
+                                <span class="form-text">Certificado de existencia y representación legal. Con él verificamos que tu NIT existe antes de activar la óptica.</span>
+                                @error('camara_comercio') <span class="invalid-feedback d-block">{{ $message }}</span> @enderror
+                            </div>
                         </div>
                     </div>
 
                     {{-- 2. Administrador --}}
                     <div class="card border-0 shadow-sm p-4 p-md-5 mb-4">
                         <p class="contratar-seccion"><span class="contratar-paso">2</span>Administrador</p>
-                        <p class="text-muted small mb-4">La persona que va a manejar el panel. A su correo le enviaremos la contraseña.</p>
+                        <p class="text-muted small mb-4">La persona que va a manejar el panel. Entra con su correo y, en el primer ingreso, debe cambiar la contraseña temporal.</p>
 
                         <div class="row g-3">
                             <div class="col-md-6">
@@ -118,7 +124,7 @@
                             <div class="col-12">
                                 <label for="admin_email" class="form-label fw-medium">Correo para entrar al panel</label>
                                 <input type="email" id="admin_email" name="admin_email" value="{{ old('admin_email') }}" class="{{ $campo('admin_email') }}" required>
-                                <span class="form-text">A este correo llega la contraseña cuando aprobemos el registro.</span>
+                                <span class="form-text">Es tu usuario para entrar al panel. La contraseña temporal llega al correo de la óptica.</span>
                                 @error('admin_email') <span class="invalid-feedback d-block">{{ $message }}</span> @enderror
                             </div>
                         </div>

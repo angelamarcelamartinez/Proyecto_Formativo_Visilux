@@ -4,11 +4,11 @@ use App\Http\Controllers\Admin\ControlController;
 use App\Http\Controllers\Admin\CrudController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\LicenciaController as AdminLicenciaController;
-use App\Http\Controllers\Admin\PaginaController;
 use App\Http\Controllers\Superadmin\DashboardController as SuperDashboardController;
 use App\Http\Controllers\Superadmin\EmpresaController as SuperEmpresaController;
 use App\Http\Controllers\Superadmin\LicenciaController as SuperLicenciaController;
 use App\Http\Controllers\Superadmin\PlanController as SuperPlanController;
+use App\Http\Controllers\Superadmin\ReporteController as SuperReporteController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\SuperadminLoginController;
 use App\Http\Controllers\Auth\ForgotPasswordController;
@@ -72,6 +72,12 @@ Route::middleware('guest')->group(function () {
     Route::post('/password/update', [ResetPasswordController::class, 'reset'])->name('password.update');
 });
 
+// Primer ingreso: cambiar la contraseña temporal que se envió por correo
+Route::middleware('auth')->group(function () {
+    Route::get('/cambiar-password', [\App\Http\Controllers\Auth\CambiarPasswordController::class, 'edit'])->name('password.cambiar');
+    Route::post('/cambiar-password', [\App\Http\Controllers\Auth\CambiarPasswordController::class, 'update'])->name('password.cambiar.guardar');
+});
+
 // Logout (requiere estar autenticado)
 Route::post('/logout', [LoginController::class, 'logout'])
     ->middleware('auth')
@@ -95,15 +101,19 @@ Route::prefix('superadmin')->middleware(['superadmin'])->name('superadmin.')->gr
     Route::get('/opticas/nueva', [SuperEmpresaController::class, 'create'])->name('empresas.create');
     Route::post('/opticas', [SuperEmpresaController::class, 'store'])->name('empresas.store');
     Route::get('/opticas/{nit}', [SuperEmpresaController::class, 'show'])->name('empresas.show');
+    // Certificado de la Cámara de Comercio (PDF privado): se abre desde una ventana emergente
+    Route::get('/opticas/{nit}/camara-comercio', [SuperEmpresaController::class, 'camara'])->name('empresas.camara');
     Route::get('/opticas/{nit}/editar', [SuperEmpresaController::class, 'edit'])->name('empresas.edit');
     Route::put('/opticas/{nit}', [SuperEmpresaController::class, 'update'])->name('empresas.update');
-    Route::post('/opticas/{nit}/estado', [SuperEmpresaController::class, 'cambiarEstado'])->name('empresas.estado');
     Route::post('/opticas/{nit}/licencia', [SuperEmpresaController::class, 'asignarLicencia'])->name('empresas.licencia');
 
-    // Solicitudes y licencias
-    Route::get('/licencias', [SuperLicenciaController::class, 'index'])->name('licencias.index');
+    // Aprobar o rechazar pagos (se hace desde el Panel general)
     Route::post('/licencias/{id}/aprobar', [SuperLicenciaController::class, 'aprobar'])->name('licencias.aprobar');
     Route::post('/licencias/{id}/rechazar', [SuperLicenciaController::class, 'rechazar'])->name('licencias.rechazar');
+
+    // Reportes: ingresos, ópticas, actividad y ópticas que requieren atención
+    Route::get('/reportes', [SuperReporteController::class, 'index'])->name('reportes.index');
+    Route::get('/reportes/{reporte}/{formato}', [SuperReporteController::class, 'descargar'])->name('reportes.descargar');
 
     // Planes
     Route::get('/planes', [SuperPlanController::class, 'index'])->name('planes.index');
@@ -112,17 +122,13 @@ Route::prefix('superadmin')->middleware(['superadmin'])->name('superadmin.')->gr
 
 // --- Panel de administración de cada óptica ---
 // 'licencia' saca al admin si su óptica está suspendida o sin licencia vigente.
-Route::prefix('admin')->middleware(['auth', 'admin', 'licencia'])->name('admin.')->group(function () {
+Route::prefix('admin')->middleware(['auth', 'cambiar.password', 'admin', 'licencia'])->name('admin.')->group(function () {
     Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
 
     // Mi licencia: ver el plan y renovar antes de que venza
     Route::get('/mi-licencia', [AdminLicenciaController::class, 'index'])->name('licencia.index');
     Route::post('/mi-licencia', [AdminLicenciaController::class, 'solicitar'])->name('licencia.solicitar');
     Route::delete('/mi-licencia/{id}', [AdminLicenciaController::class, 'cancelar'])->name('licencia.cancelar');
-
-    // Página pública de la óptica (va antes del CRUD genérico para que /{table} no la atrape)
-    Route::get('/mi-pagina', [PaginaController::class, 'edit'])->name('pagina.edit');
-    Route::put('/mi-pagina', [PaginaController::class, 'update'])->name('pagina.update');
 
     // Recordatorios de cita de control
     Route::get('/citas-control', [ControlController::class, 'index'])->name('control.index');

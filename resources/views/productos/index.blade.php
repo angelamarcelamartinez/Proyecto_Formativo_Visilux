@@ -171,7 +171,7 @@
                         @endforeach
                     </div>
 
-                    <div class="d-flex justify-content-center mt-5">
+                    <div class="d-flex justify-content-center mt-5 paginacion-visilux">
                         {{ $productos->links('pagination::bootstrap-5') }}
                     </div>
                 @endif

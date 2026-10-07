@@ -33,6 +33,7 @@
                                             Ver más
                                         </button>
                                     @endif
+                                    @unless (\App\Support\Alcance::soloLectura($table))
                                     <a href="{{ route('admin.crud.edit', [$table, $rowId]) }}"
                                        class="p-2 rounded-lg text-olive-600 hover:bg-olive-100" title="Editar">
                                         @include('partials.icon', ['name' => 'pencil', 'class' => 'w-4 h-4'])
@@ -45,6 +46,7 @@
                                             @include('partials.icon', ['name' => 'trash', 'class' => 'w-4 h-4'])
                                         </button>
                                     </form>
+                                    @endunless
                                 </div>
 
                                 @if ($hasMore)
@@ -82,7 +84,9 @@
                                     No se encontraron registros con esa búsqueda o filtro.
                                 @else
                                     No hay registros todavía.
+                                    @unless (\App\Support\Alcance::soloLectura($table))
                                     <a href="{{ route('admin.crud.create', $table) }}" class="text-olive-600 font-medium hover:underline">Crear el primero</a>.
+                                    @endunless
                                 @endif
                             </td>
                         </tr>

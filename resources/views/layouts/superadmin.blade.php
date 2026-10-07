@@ -37,9 +37,9 @@
         <nav class="flex-1 overflow-y-auto px-3 py-4 space-y-1">
             @php
                 $menu = [
-                    ['route' => 'superadmin.dashboard', 'match' => 'superadmin.dashboard', 'icon' => 'grid', 'label' => 'Panel general'],
+                    ['route' => 'superadmin.dashboard', 'match' => 'superadmin.dashboard', 'icon' => 'grid', 'label' => 'Panel general', 'badge' => $solicitudesPendientes ?? 0],
                     ['route' => 'superadmin.empresas.index', 'match' => 'superadmin.empresas.*', 'icon' => 'building', 'label' => 'Ópticas'],
-                    ['route' => 'superadmin.licencias.index', 'match' => 'superadmin.licencias.*', 'icon' => 'shield', 'label' => 'Licencias y pagos', 'badge' => $solicitudesPendientes ?? 0],
+                    ['route' => 'superadmin.reportes.index', 'match' => 'superadmin.reportes.*', 'icon' => 'file-text', 'label' => 'Reportes'],
                     ['route' => 'superadmin.planes.index', 'match' => 'superadmin.planes.*', 'icon' => 'tag', 'label' => 'Planes'],
                 ];
             @endphp

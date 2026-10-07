@@ -5,14 +5,18 @@ namespace App\Http\Controllers\Superadmin;
 use App\Http\Controllers\Controller;
 use App\Models\Actividad;
 use App\Models\Empresa;
+use App\Models\Licencia;
 use App\Models\PaginaEmpresa;
 use App\Models\Plan;
 use App\Models\Usuario;
+use App\Support\CamaraComercio;
 use App\Support\Licencias;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
@@ -47,7 +51,18 @@ class EmpresaController extends Controller
             $opticas = $opticas->where('estado_licencia', $estado)->values();
         }
 
-        return view('superadmin.empresas.index', compact('opticas', 'estado', 'q', 'conteos'));
+        // Historial de licencias de todas las ópticas (los pagos por aprobar están en el Panel general)
+        $estadoLic = in_array($request->get('lic'), ['activa', 'vencida', 'cancelada'], true) ? $request->get('lic') : 'todas';
+
+        $historial = Licencia::with(['empresa', 'plan'])
+            ->where('estado', '<>', 'pendiente')
+            ->when($estadoLic !== 'todas', fn ($q2) => $q2->where('estado', $estadoLic))
+            ->orderByDesc('fecha_solicitud')
+            ->paginate(10, ['*'], 'hist')
+            ->withQueryString()
+            ->fragment('historial');
+
+        return view('superadmin.empresas.index', compact('opticas', 'estado', 'q', 'conteos', 'historial', 'estadoLic'));
     }
 
     /**
@@ -78,15 +93,21 @@ class EmpresaController extends Controller
 
         $inicioMes = now()->startOfMonth();
 
+        // Si la base de datos todavía no tiene la columna nit_empresa en alguna tabla,
+        // esa cifra se muestra en 0 en vez de romper la ficha de la óptica.
+        $consulta = fn (string $tabla) => Schema::hasColumn($tabla, 'nit_empresa')
+            ? DB::table($tabla)->where('nit_empresa', $nit)
+            : DB::table($tabla)->whereRaw('1 = 0');
+
         $movimiento = [
-            'citas_total' => DB::table('asignacion_cita')->where('nit_empresa', $nit)->count(),
-            'citas_mes' => DB::table('asignacion_cita')->where('nit_empresa', $nit)->where('fecha_cita', '>=', $inicioMes)->count(),
-            'ventas_total' => (float) DB::table('venta')->where('nit_empresa', $nit)->sum('total')
-                + (float) DB::table('venta_medicamento')->where('nit_empresa', $nit)->sum('total'),
-            'ventas_mes' => (float) DB::table('venta')->where('nit_empresa', $nit)->where('fecha_venta', '>=', $inicioMes)->sum('total')
-                + (float) DB::table('venta_medicamento')->where('nit_empresa', $nit)->where('fecha', '>=', $inicioMes)->sum('total'),
-            'historias' => DB::table('historia_clinica')->where('nit_empresa', $nit)->count(),
-            'productos' => DB::table('producto')->where('nit_empresa', $nit)->count(),
+            'citas_total' => $consulta('asignacion_cita')->count(),
+            'citas_mes' => $consulta('asignacion_cita')->where('fecha_cita', '>=', $inicioMes)->count(),
+            'ventas_total' => (float) $consulta('venta')->sum('total')
+                + (float) $consulta('venta_medicamento')->sum('total'),
+            'ventas_mes' => (float) $consulta('venta')->where('fecha_venta', '>=', $inicioMes)->sum('total')
+                + (float) $consulta('venta_medicamento')->where('fecha', '>=', $inicioMes)->sum('total'),
+            'historias' => $consulta('historia_clinica')->count(),
+            'productos' => $consulta('producto')->count(),
         ];
 
         $actividad = Actividad::with('usuario')
@@ -123,13 +144,19 @@ class EmpresaController extends Controller
             'admin_email' => ['required', 'email', 'max:100', 'unique:usuario,email'],
             'admin_telefono' => ['required', 'string', 'max:20', 'unique:usuario,telefono'],
             'admin_password' => ['required', 'string', 'min:8'],
-        ]), [], $this->nombresCampos());
+            // Certificado de la Cámara de Comercio + confirmación de la ventana emergente
+            'camara_comercio' => CamaraComercio::reglas(),
+            'confirmo' => ['accepted'],
+        ]), $this->mensajesVerificacion(), $this->nombresCampos());
 
-        $empresa = DB::transaction(function () use ($data) {
+        $rutaCamara = CamaraComercio::guardar($request->file('camara_comercio'), $data['nit']);
+
+        try {
+        $empresa = DB::transaction(function () use ($data, $rutaCamara) {
             $empresa = Empresa::create([
                 'nit' => $data['nit'],
                 'nombre' => $data['nombre'],
-                'slug' => Empresa::slugDisponible($data['slug'] ?: $data['nombre']),
+                'slug' => Empresa::slugDisponible(($data['slug'] ?? null) ?: $data['nombre']),
                 'email' => $data['email'],
                 'telefono' => $data['telefono'] ?? null,
                 'direccion' => $data['direccion'] ?? null,
@@ -137,6 +164,7 @@ class EmpresaController extends Controller
                 'estado' => 'activa',
                 'prueba_usada' => 0,
                 'fecha_registro' => now(),
+                'camara_comercio' => $rutaCamara,
             ]);
 
             Usuario::create([
@@ -160,10 +188,14 @@ class EmpresaController extends Controller
 
             PaginaEmpresa::deEmpresa($empresa);
 
-            Actividad::registrar($empresa->nit, 'crear', "Óptica {$empresa->nombre} registrada", 'empresa', $empresa->nit);
+            Actividad::registrar($empresa->nit, 'crear', "Óptica {$empresa->nombre} registrada y NIT verificado con la Cámara de Comercio", 'empresa', $empresa->nit);
 
             return $empresa;
         });
+        } catch (\Throwable $e) {
+            CamaraComercio::borrar($rutaCamara);
+            throw $e;
+        }
 
         return redirect()->route('superadmin.empresas.show', $empresa->nit)
             ->with('success', "La óptica {$empresa->nombre} quedó registrada con 1 mes de prueba.");
@@ -181,48 +213,45 @@ class EmpresaController extends Controller
     {
         $empresa = Empresa::findOrFail($nit);
 
-        $data = $request->validate($this->reglasEmpresa($empresa), [], $this->nombresCampos());
+        // Modificar una óptica obliga a verificar su NIT otra vez: PDF nuevo + confirmación.
+        $data = $request->validate(array_merge($this->reglasEmpresa($empresa), [
+            'camara_comercio' => CamaraComercio::reglas(),
+            'confirmo' => ['accepted'],
+        ]), $this->mensajesVerificacion(), $this->nombresCampos());
+
+        $anterior = $empresa->camara_comercio;
+        $rutaCamara = CamaraComercio::guardar($request->file('camara_comercio'), $empresa->nit);
 
         $empresa->update([
+            'camara_comercio' => $rutaCamara,
             'nombre' => $data['nombre'],
-            'slug' => Empresa::slugDisponible($data['slug'] ?: $data['nombre'], $empresa->nit),
+            'slug' => Empresa::slugDisponible(($data['slug'] ?? null) ?: $data['nombre'], $empresa->nit),
             'email' => $data['email'],
             'telefono' => $data['telefono'] ?? null,
             'direccion' => $data['direccion'] ?? null,
             'ciudad' => $data['ciudad'] ?? null,
         ]);
 
-        Actividad::registrar($empresa->nit, 'editar', 'Datos de la óptica actualizados', 'empresa', $empresa->nit);
+        CamaraComercio::borrar($anterior);
+
+        Actividad::registrar($empresa->nit, 'editar', 'Datos de la óptica actualizados y NIT verificado con la Cámara de Comercio', 'empresa', $empresa->nit);
 
         return redirect()->route('superadmin.empresas.show', $empresa->nit)
-            ->with('success', 'Datos de la óptica actualizados.');
+            ->with('success', 'Datos de la óptica actualizados y NIT verificado.');
     }
 
     /**
-     * Activar o suspender una óptica. Suspendida no puede entrar a su panel
-     * y su página pública deja de mostrarse.
+     * Muestra el PDF de la Cámara de Comercio (archivo privado: solo lo ve el superadmin).
      */
-    public function cambiarEstado(Request $request, string $nit): RedirectResponse
+    public function camara(string $nit)
     {
         $empresa = Empresa::findOrFail($nit);
+        abort_unless($empresa->tieneCamara(), 404, 'Esta óptica no tiene certificado cargado.');
 
-        if ($empresa->estaPendiente()) {
-            return back()->withErrors(['general' => 'Esta óptica todavía espera la aprobación de su pago. Apruébala o recházala en Licencias y pagos.']);
-        }
-
-        $nuevo = $empresa->estaSuspendida() ? 'activa' : 'suspendida';
-
-        $empresa->update(['estado' => $nuevo]);
-
-        Actividad::registrar(
-            $empresa->nit, 'licencia',
-            $nuevo === 'activa' ? 'Óptica reactivada por el superadmin' : 'Óptica suspendida por el superadmin',
-            'empresa', $empresa->nit
-        );
-
-        return back()->with('success', $nuevo === 'activa'
-            ? "{$empresa->nombre} está activa de nuevo."
-            : "{$empresa->nombre} quedó suspendida. Su equipo ya no puede entrar al panel.");
+        return response()->file(CamaraComercio::ruta($empresa->camara_comercio), [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'inline; filename="camara-comercio-' . $empresa->nit . '.pdf"',
+        ]);
     }
 
     /**
@@ -233,7 +262,7 @@ class EmpresaController extends Controller
         $empresa = Empresa::findOrFail($nit);
 
         if ($empresa->estaPendiente()) {
-            return back()->withErrors(['general' => 'Primero aprueba el pago de su registro en Licencias y pagos.']);
+            return back()->withErrors(['general' => 'Primero aprueba el pago de su registro en el Panel general.']);
         }
 
         $data = $request->validate([
@@ -272,10 +301,17 @@ class EmpresaController extends Controller
         ];
     }
 
+    protected function mensajesVerificacion(): array
+    {
+        return array_merge(CamaraComercio::mensajes(), [
+            'confirmo.accepted' => 'Marca la casilla para confirmar que verificaste el NIT con la Cámara de Comercio.',
+        ]);
+    }
+
     protected function nombresCampos(): array
     {
         return [
-            'nit' => 'NIT', 'nombre' => 'nombre', 'slug' => 'dirección web', 'email' => 'correo',
+            'nit' => 'NIT', 'camara_comercio' => 'certificado de la Cámara de Comercio', 'nombre' => 'nombre', 'slug' => 'dirección web', 'email' => 'correo',
             'admin_documento' => 'documento del administrador', 'admin_nombres' => 'nombres del administrador',
             'admin_email' => 'correo del administrador', 'admin_password' => 'contraseña',
             'admin_telefono' => 'celular del administrador',

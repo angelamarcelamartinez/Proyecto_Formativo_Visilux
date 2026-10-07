@@ -30,11 +30,13 @@
                     Excel
                 </a>
             @endif
+            @unless (\App\Support\Alcance::soloLectura($table))
             <a href="{{ route('admin.crud.create', $table) }}"
                class="inline-flex items-center gap-2 bg-olive-600 hover:bg-olive-700 transition text-cream text-sm font-medium px-4 py-2.5 rounded-xl shadow-card shrink-0">
                 @include('partials.icon', ['name' => 'plus', 'class' => 'w-4 h-4'])
                 Nuevo
             </a>
+            @endunless
         </div>
     </div>
 
