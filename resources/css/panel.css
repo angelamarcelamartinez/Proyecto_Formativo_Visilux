@@ -1,0 +1,17 @@
+/*!
+ * Estilos del panel de administración y del panel del superadmin de VisiOptica.
+ * Es CSS normal generado a partir de las clases de las vistas: no necesita internet.
+ *
+ * Este es el archivo fuente. Si agregas clases nuevas en las vistas del panel,
+ * regenera el CSS desde la carpeta del proyecto con:
+ *   npx tailwindcss@3 -c tailwind.panel.config.cjs -i resources/css/panel.css -o public/assets/css/panel.css --minify
+ */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body { font-family: 'Inter', ui-sans-serif, system-ui, sans-serif; }
+.font-serif-heading { font-family: 'Fraunces', Georgia, serif; }
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-thumb { background: #E4DCC7; border-radius: 8px; }
+[x-cloak] { display: none !important; }
