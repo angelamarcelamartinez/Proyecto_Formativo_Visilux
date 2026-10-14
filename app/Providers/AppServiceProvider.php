@@ -57,7 +57,7 @@ class AppServiceProvider extends ServiceProvider
 
                 if (! $pagina instanceof PaginaEmpresa) {
                     $empresa = Empresa::find(session('optica_nit', config('visioptica.empresa_principal')))
-                        ?? Empresa::find(config('visioptica.empresa_principal'));
+                        ?? Empresa::principal();
                     $pagina = $empresa ? PaginaEmpresa::deEmpresa($empresa) : null;
                 }
 
@@ -73,6 +73,54 @@ class AppServiceProvider extends ServiceProvider
         // Número de solicitudes de plan por aprobar, para el menú del superadmin.
         View::composer('layouts.superadmin', function ($view) {
             $view->with('solicitudesPendientes', \App\Models\Licencia::where('estado', 'pendiente')->count());
+
+            // Administradores bloqueados (inactivos): solo el superadmin puede desbloquearlos.
+            $bloqueados = \App\Models\Usuario::with('empresa:nit,nombre')
+                ->where('id_rol', config('visioptica.rol_admin'))
+                ->where('id_estado', 2)
+                ->get();
+
+            $motivos = \App\Models\Actividad::where('tabla', 'usuario')
+                ->where('descripcion', 'like', 'Cuenta inactivada por 4 intentos%')
+                ->whereIn('id_registro', $bloqueados->pluck('documento'))
+                ->orderBy('fecha')
+                ->get()
+                ->keyBy('id_registro');
+
+            $bloqueados->each(function ($u) use ($motivos) {
+                $u->bloqueado_desde = $motivos[$u->documento]->fecha ?? null;
+                $u->por_intentos = isset($motivos[$u->documento]);
+            });
+
+            $view->with('adminsBloqueados', $bloqueados);
+        });
+
+        // Notificación del candado en el panel de la óptica: usuarios (no administradores)
+        // de esa óptica que están bloqueados. El administrador los desbloquea desde ahí.
+        View::composer('layouts.admin', function ($view) {
+            $yo = Auth::user();
+            $bloqueados = collect();
+
+            if ($yo && $yo->nit_empresa) {
+                $bloqueados = \App\Models\Usuario::where('nit_empresa', $yo->nit_empresa)
+                    ->whereNotIn('id_rol', [config('visioptica.rol_admin'), 6])
+                    ->where('id_estado', 2)
+                    ->get();
+
+                $motivos = \App\Models\Actividad::where('tabla', 'usuario')
+                    ->where('descripcion', 'like', 'Cuenta inactivada por 4 intentos%')
+                    ->whereIn('id_registro', $bloqueados->pluck('documento'))
+                    ->orderBy('fecha')
+                    ->get()
+                    ->keyBy('id_registro');
+
+                $bloqueados->each(function ($u) use ($motivos) {
+                    $u->bloqueado_desde = $motivos[$u->documento]->fecha ?? null;
+                    $u->por_intentos = isset($motivos[$u->documento]);
+                });
+            }
+
+            $view->with('usuariosBloqueados', $bloqueados);
         });
 
         // Aviso de pago en el panel de la óptica cuando faltan 30 días o menos.

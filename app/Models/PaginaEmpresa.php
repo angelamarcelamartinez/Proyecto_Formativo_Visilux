@@ -31,7 +31,7 @@ class PaginaEmpresa extends Model
      */
     public static function deEmpresa(Empresa $empresa): self
     {
-        $contacto = $empresa->nit === config('visioptica.empresa_principal')
+        $contacto = $empresa->nit === (int) config('visioptica.empresa_principal')
             ? config('visioptica.contacto_principal')
             : [
                 'telefono' => $empresa->telefono,

@@ -7,6 +7,7 @@ use App\Mail\EmpleadoCredencialesMail;
 use App\Models\Actividad;
 use App\Models\Rol;
 use App\Models\Usuario;
+use App\Support\BloqueoUsuarios;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -134,13 +135,20 @@ class EquipoController extends Controller
     public function estado(int $documento): RedirectResponse
     {
         $empleado = $this->empleado($documento);
-        $inactivo = in_array((int) $empleado->id_estado, [2, 4], true);
+        $nombre = trim($empleado->nombres . ' ' . $empleado->apellido);
 
-        $empleado->update(['id_estado' => $inactivo ? 1 : 2]);
+        // BloqueoUsuarios recuerda el estado anterior (p. ej. «Pendiente» si aún no cambió su contraseña
+        // temporal) y, al activar, le avisa por correo al empleado.
+        if (BloqueoUsuarios::estaInactivo($empleado) || (int) $empleado->id_estado === 4) {
+            $correo = BloqueoUsuarios::activar($empleado, 'Empleado activado por el administrador');
 
-        Actividad::registrar($empleado->nit_empresa, 'editar', ($inactivo ? 'Activó' : 'Desactivó') . " al empleado {$empleado->nombres}", 'usuario', $empleado->documento);
+            return back()->with('success', "{$nombre} fue activado y ya puede iniciar sesión."
+                . ($correo ? " Le enviamos un correo a {$empleado->email}." : ' (No se pudo enviar el correo de aviso.)'));
+        }
 
-        return back()->with('success', $inactivo ? "{$empleado->nombres} fue activado." : "{$empleado->nombres} fue desactivado y ya no puede entrar.");
+        BloqueoUsuarios::inactivar($empleado, 'Empleado desactivado por el administrador');
+
+        return back()->with('success', "{$nombre} fue desactivado y ya no puede entrar.");
     }
 
     /** Genera una contraseña temporal nueva y la envía al correo del empleado. */

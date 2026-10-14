@@ -50,7 +50,7 @@
                         </div>
                     @endif
 
-                    <form method="POST" action="{{ route('renovar.store') }}" novalidate>
+                    <form method="POST" action="{{ route('renovar.store') }}" novalidate data-validar>
                         @csrf
 
                         <div class="card border-0 shadow-sm p-4 p-md-5 mb-4">
@@ -59,12 +59,12 @@
                             <div class="row g-3">
                                 <div class="col-md-5">
                                     <label for="nit" class="form-label fw-medium">NIT de la óptica</label>
-                                    <input type="text" id="nit" name="nit" value="{{ old('nit', $nit) }}" class="{{ $campo('nit') }}" required>
+                                    <input type="text" id="nit" name="nit" value="{{ old('nit', $nit) }}" class="{{ $campo('nit') }}" inputmode="numeric" maxlength="13" placeholder="9001234567" data-v="nit-simple" required>
                                     @error('nit') <span class="invalid-feedback d-block">{{ $message }}</span> @enderror
                                 </div>
                                 <div class="col-md-7">
                                     <label for="admin_email" class="form-label fw-medium">Correo con el que entras al panel</label>
-                                    <input type="email" id="admin_email" name="admin_email" value="{{ old('admin_email') }}" class="{{ $campo('admin_email') }}" required>
+                                    <input type="email" id="admin_email" name="admin_email" value="{{ old('admin_email') }}" class="{{ $campo('admin_email') }}" maxlength="100" data-v="email" required>
                                     @error('admin_email') <span class="invalid-feedback d-block">{{ $message }}</span> @enderror
                                 </div>
                             </div>

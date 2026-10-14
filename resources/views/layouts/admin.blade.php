@@ -159,6 +159,40 @@
                 </div>
             </div>
 
+            {{-- Notificaciones: usuarios bloqueados --}}
+            <div class="relative" x-data="{ open: false }" @click.outside="open = false" @keydown.escape.window="open = false">
+                <button type="button" @click="open = !open" title="Usuarios bloqueados"
+                        class="relative w-10 h-10 rounded-full border border-olive-100 bg-white flex items-center justify-center text-ink/70 hover:text-ink">
+                    @include('partials.icon', ['name' => 'lock', 'class' => 'w-5 h-5'])
+                    @if (($usuariosBloqueados ?? collect())->count() > 0)
+                        <span class="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-red-600 text-white text-[10px] font-bold flex items-center justify-center">{{ $usuariosBloqueados->count() }}</span>
+                    @endif
+                </button>
+
+                <div x-show="open" x-cloak x-transition
+                     class="absolute right-0 mt-2 w-80 max-w-[calc(100vw-2rem)] bg-white border border-olive-100 rounded-xl shadow-lg overflow-hidden z-40">
+                    <div class="px-4 py-3 border-b border-olive-100 text-sm font-semibold">Usuarios bloqueados</div>
+                    <div class="max-h-96 overflow-y-auto divide-y divide-olive-100">
+                        @forelse (($usuariosBloqueados ?? collect()) as $adm)
+                            <div class="px-4 py-3 text-sm">
+                                <p class="font-semibold leading-tight">{{ trim($adm->nombres . ' ' . $adm->apellido) }}</p>
+                                <p class="text-xs text-muted">{{ $adm->rol->nombre_rol ?? 'Usuario' }} · {{ $adm->email }}</p>
+                                <p class="text-xs text-red-700 mt-1">
+                                    {{ $adm->por_intentos ? 'Bloqueado por 4 intentos fallidos' : 'Cuenta inactiva' }}
+                                    @if ($adm->bloqueado_desde) · {{ $adm->bloqueado_desde->diffForHumans() }} @endif
+                                </p>
+                                <form method="POST" action="{{ route('admin.usuario.estado', $adm->documento) }}" class="mt-2">
+                                    @csrf
+                                    <button type="submit" class="px-3 py-1.5 rounded-lg bg-ink text-cream text-xs font-semibold">Desbloquear</button>
+                                </form>
+                            </div>
+                        @empty
+                            <p class="px-4 py-6 text-sm text-muted text-center">No hay usuarios bloqueados.</p>
+                        @endforelse
+                    </div>
+                </div>
+            </div>
+
             <div class="flex items-center gap-3 pl-2">
                 <div class="text-right hidden sm:block">
                     <p class="text-sm font-semibold leading-tight">{{ auth()->user()->nombres ?? 'Administrador' }}</p>

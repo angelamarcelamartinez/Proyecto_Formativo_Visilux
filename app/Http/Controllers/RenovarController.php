@@ -30,22 +30,25 @@ class RenovarController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
+        // Se acepta el NIT con o sin puntos y guion; en la base está solo con dígitos.
+        $request->merge(['nit' => \App\Support\Nit::normalizar($request->input('nit'))]);
+
         $datos = $request->validate([
-            'nit' => ['required', 'string', 'max:20'],
+            'nit' => \App\Support\Nit::reglas(),
             'admin_email' => ['required', 'email', 'max:100'],
             'id_plan' => ['required', 'exists:plan,id_plan'],
             'tarjeta_titular' => ['required', 'string', 'max:100'],
             'tarjeta_numero' => ['required', 'string', 'max:23'],
             'tarjeta_vencimiento' => ['required', 'string', 'max:5'],
             'tarjeta_cvv' => ['required', 'string', 'max:4'],
-        ], [], [
+        ], \App\Support\Nit::mensajes(), [
             'nit' => 'NIT', 'admin_email' => 'correo del administrador', 'id_plan' => 'plan',
             'tarjeta_titular' => 'nombre en la tarjeta', 'tarjeta_numero' => 'número de la tarjeta',
             'tarjeta_vencimiento' => 'vencimiento', 'tarjeta_cvv' => 'CVV',
         ]);
 
         // El NIT y el correo tienen que corresponder a un administrador de esa óptica.
-        $empresa = Empresa::find(trim($datos['nit']));
+        $empresa = Empresa::find((int) $datos['nit']);
         $esAdmin = $empresa && Usuario::where('nit_empresa', $empresa->nit)
             ->where('id_rol', config('visioptica.rol_admin'))
             ->where('email', trim($datos['admin_email']))

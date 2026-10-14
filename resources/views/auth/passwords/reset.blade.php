@@ -32,7 +32,7 @@
                 </div>
 
                 <!-- FORMULARIO DE RESETEO -->
-                <form method="POST" action="{{ route('password.update') }}" novalidate>
+                <form method="POST" action="{{ route('password.update') }}" novalidate data-validar>
                     @csrf
 
                     <input type="hidden" name="token" value="{{ $token }}">
@@ -50,6 +50,7 @@
                                    name="email" 
                                    value="{{ $email ?? old('email') }}" 
                                    required 
+                                   data-v="email" maxlength="100"
                                    autocomplete="email" 
                                    autofocus>
                         </div>
@@ -71,7 +72,8 @@
                                    class="form-control border-start-0 login-input @error('password') is-invalid @enderror" 
                                    id="password" 
                                    name="password" 
-                                   placeholder="••••••••" 
+                                   placeholder="Mínimo 8 caracteres" 
+                                   data-v="password"
                                    required 
                                    autocomplete="new-password">
                         </div>
@@ -94,6 +96,7 @@
                                    id="password-confirm" 
                                    name="password_confirmation" 
                                    placeholder="••••••••" 
+                                   data-v-igual="#password"
                                    required 
                                    autocomplete="new-password">
                         </div>
@@ -114,5 +117,7 @@
 
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Validación en línea de los formularios (verde = bien, rojo = mal) -->
+    <script src="{{ asset('assets/js/validacion-en-linea.js') }}?v={{ @filemtime(public_path('assets/js/validacion-en-linea.js')) }}"></script>
 </body>
 </html>

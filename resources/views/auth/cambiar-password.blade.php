@@ -25,7 +25,7 @@
                     </p>
                 </div>
 
-                <form method="POST" action="{{ route('password.cambiar.guardar') }}" novalidate>
+                <form method="POST" action="{{ route('password.cambiar.guardar') }}" novalidate data-validar>
                     @csrf
 
                     @foreach ([
@@ -39,6 +39,8 @@
                                 <span class="input-group-text bg-light border-end-0"><i class="bi {{ $icono }} text-muted"></i></span>
                                 <input type="password" id="{{ $campo }}" name="{{ $campo }}" required
                                        @if ($loop->first) autofocus @endif
+                                       @if ($campo === 'password') data-v="password" autocomplete="new-password" @endif
+                                       @if ($campo === 'password_confirmation') data-v-igual="#password" autocomplete="new-password" @endif
                                        class="form-control border-start-0 login-input @error($campo) is-invalid @enderror">
                             </div>
                             @error($campo)
@@ -60,5 +62,7 @@
             </div>
         </div>
     </div>
+    <!-- Validación en línea de los formularios (verde = bien, rojo = mal) -->
+    <script src="{{ asset('assets/js/validacion-en-linea.js') }}?v={{ @filemtime(public_path('assets/js/validacion-en-linea.js')) }}"></script>
 </body>
 </html>

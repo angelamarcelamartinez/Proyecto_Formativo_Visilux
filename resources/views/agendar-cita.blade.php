@@ -76,7 +76,7 @@
                 @endguest
 
                 <div class="card border-0 shadow-sm p-4 p-md-5">
-                    <form method="POST" action="{{ route('citas.store') }}" id="form-cita" novalidate>
+                    <form method="POST" action="{{ route('citas.store') }}" id="form-cita" novalidate data-validar>
                         @csrf
 
                         {{-- 1. Datos de la persona --}}
@@ -92,7 +92,7 @@
                                 <div class="col-md-6">
                                     <label for="nombre" class="form-label fw-medium">Nombre completo</label>
                                     <input type="text" class="form-control @error('nombre') is-invalid @enderror"
-                                           id="nombre" name="nombre" value="{{ old('nombre') }}" required>
+                                           id="nombre" name="nombre" value="{{ old('nombre') }}" maxlength="100" data-v="nombre" required>
                                     @error('nombre') <span class="invalid-feedback d-block">{{ $message }}</span> @enderror
                                 </div>
                                 <div class="col-md-6">
@@ -108,19 +108,19 @@
                                 <div class="col-md-6">
                                     <label for="documento" class="form-label fw-medium">Número de documento</label>
                                     <input type="text" inputmode="numeric" class="form-control @error('documento') is-invalid @enderror"
-                                           id="documento" name="documento" value="{{ old('documento') }}" required>
+                                           id="documento" name="documento" value="{{ old('documento') }}" maxlength="15" data-v="documento" data-v-tipo="#id_tipo_docu" required>
                                     @error('documento') <span class="invalid-feedback d-block">{{ $message }}</span> @enderror
                                 </div>
                                 <div class="col-md-6">
                                     <label for="telefono" class="form-label fw-medium">Teléfono</label>
                                     <input type="tel" class="form-control @error('telefono') is-invalid @enderror"
-                                           id="telefono" name="telefono" value="{{ old('telefono') }}" required>
+                                           id="telefono" name="telefono" value="{{ old('telefono') }}" maxlength="10" placeholder="300 123 4567" data-v="telefono" required>
                                     @error('telefono') <span class="invalid-feedback d-block">{{ $message }}</span> @enderror
                                 </div>
                                 <div class="col-12">
                                     <label for="correo" class="form-label fw-medium">Correo electrónico</label>
                                     <input type="email" class="form-control @error('correo') is-invalid @enderror"
-                                           id="correo" name="correo" value="{{ old('correo') }}" required>
+                                           id="correo" name="correo" value="{{ old('correo') }}" maxlength="100" data-v="email" required>
                                     @error('correo') <span class="invalid-feedback d-block">{{ $message }}</span> @enderror
                                 </div>
                             </div>

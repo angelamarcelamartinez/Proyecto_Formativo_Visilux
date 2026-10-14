@@ -230,12 +230,28 @@
                         <a href="{{ route('superadmin.empresas.admins', $empresa->nit) }}" class="text-xs font-medium text-olive-700 hover:underline">Ver y editar</a>
                     </div>
                     @foreach ($admins as $admin)
-                        <div class="text-sm py-1.5">
-                            <p class="font-medium">{{ trim($admin->nombres . ' ' . $admin->apellido) }}</p>
-                            <p class="text-xs text-muted">
-                                {{ $admin->email }} ·
-                                {{ $admin->ultimo_acceso ? 'último ingreso ' . \Illuminate\Support\Carbon::parse($admin->ultimo_acceso)->format('d/m/Y') : 'sin ingresos registrados' }}
-                            </p>
+                        @php $adminInactivo = (int) $admin->id_estado === \App\Support\BloqueoUsuarios::ESTADO_INACTIVO; @endphp
+                        <div class="text-sm py-1.5 flex items-start justify-between gap-3">
+                            <div>
+                                <p class="font-medium">
+                                    {{ trim($admin->nombres . ' ' . $admin->apellido) }}
+                                    @if ($adminInactivo)
+                                        <span class="ml-1 px-2 py-0.5 rounded-full text-xs font-medium text-red-700 bg-red-50">Inactivo</span>
+                                    @endif
+                                </p>
+                                <p class="text-xs text-muted">
+                                    {{ $admin->email }} ·
+                                    {{ $admin->ultimo_acceso ? 'último ingreso ' . \Illuminate\Support\Carbon::parse($admin->ultimo_acceso)->format('d/m/Y') : 'sin ingresos registrados' }}
+                                </p>
+                            </div>
+                            <form method="POST" action="{{ route('superadmin.empresas.usuario.estado', [$empresa->nit, $admin->documento]) }}"
+                                  onsubmit="return confirm('{{ $adminInactivo ? '¿Activar a este administrador?' : '¿Desactivar a este administrador? No podrá iniciar sesión.' }}');">
+                                @csrf
+                                <button type="submit"
+                                        class="px-2.5 py-1.5 rounded-lg text-xs font-medium {{ $adminInactivo ? 'text-emerald-700 bg-emerald-50' : 'text-red-600 bg-red-50' }}">
+                                    {{ $adminInactivo ? 'Activar' : 'Desactivar' }}
+                                </button>
+                            </form>
                         </div>
                     @endforeach
                 @endif

@@ -55,10 +55,10 @@
                                     </p>
                                 </div>
 
-                                <form method="POST" action="{{ route('carrito.actualizar', $detalle['id']) }}" class="d-flex align-items-center gap-2">
+                                <form method="POST" action="{{ route('carrito.actualizar', $detalle['id']) }}" class="d-flex align-items-center gap-2" novalidate data-validar>
                                     @csrf
                                     @method('PUT')
-                                    <input type="number" name="cantidad" value="{{ $detalle['cantidad'] }}" min="1" class="form-control form-control-sm text-center" style="width: 60px;">
+                                    <input type="number" name="cantidad" value="{{ $detalle['cantidad'] }}" min="1" step="1" required data-v="entero" data-v-sin-mensaje class="form-control form-control-sm text-center" style="width: 60px;">
                                     <button type="submit" class="btn btn-sm btn-outline-secondary rounded-pill">Actualizar</button>
                                 </form>
 

@@ -47,7 +47,7 @@
                         </div>
                         <div class="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
                             <a href="{{ route('admin.equipo.edit', $e->documento) }}" class="font-medium text-olive-700 hover:underline">Editar</a>
-                            <form method="POST" action="{{ route('admin.equipo.credenciales', $e->documento) }}"
+                            <form method="POST" action="{{ route('admin.equipo.reenviar', $e->documento) }}"
                                   onsubmit="return confirm('Se generará una contraseña temporal nueva y se enviará a {{ $e->email }}. ¿Continuar?')">
                                 @csrf
                                 <button type="submit" class="font-medium text-olive-700 hover:underline">Reenviar credenciales</button>

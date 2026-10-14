@@ -6,14 +6,15 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
 
 /**
- * Cada óptica cliente de VisiOptica. Su identificador es el NIT.
+ * Cada óptica cliente de VisiOptica. Su identificador es el NIT, guardado como
+ * número entero sin puntos ni guion (9 dígitos + DV): 800000000-9 → 8000000009.
  */
 class Empresa extends Model
 {
     protected $table = 'empresa';
     protected $primaryKey = 'nit';
     public $incrementing = false;
-    protected $keyType = 'string';
+    protected $keyType = 'int';
     public $timestamps = false;
 
     protected $fillable = [
@@ -23,9 +24,24 @@ class Empresa extends Model
     ];
 
     protected $casts = [
+        'nit' => 'integer',
         'prueba_usada' => 'boolean',
         'fecha_registro' => 'datetime',
     ];
+
+    /**
+     * La óptica que se muestra en «/»: la de VISIOPTICA_EMPRESA_PRINCIPAL. Se busca con o sin guion
+     * (9000000001 / 900000000-1) y, si no existe, se usa la primera óptica registrada para no dejar el
+     * sitio en blanco.
+     */
+    public static function principal(): ?self
+    {
+        $nit = config('visioptica.empresa_principal');
+
+        return static::find($nit)
+            ?? static::whereRaw("REPLACE(nit, '-', '') = ?", [preg_replace('/\D/', '', (string) $nit)])->first()
+            ?? static::orderBy('fecha_registro')->first();
+    }
 
     public function licencias()
     {
@@ -98,7 +114,7 @@ class Empresa extends Model
 
     public function urlPagina(): string
     {
-        return $this->nit === config('visioptica.empresa_principal') || ! $this->slug
+        return $this->nit === (int) config('visioptica.empresa_principal') || ! $this->slug
             ? url('/')
             : route('optica.show', $this->slug);
     }
@@ -106,7 +122,13 @@ class Empresa extends Model
     /**
      * Genera un slug libre a partir del nombre: "Óptica Visión Plus" → "optica-vision-plus".
      */
-    public static function slugDisponible(string $nombre, ?string $exceptoNit = null): string
+    /** NIT para mostrar: 8000000009 → "800000000-9". */
+    public function nitFormateado(): string
+    {
+        return \App\Support\Nit::formatear($this->nit);
+    }
+
+    public static function slugDisponible(string $nombre, int|string|null $exceptoNit = null): string
     {
         $base = Str::slug($nombre) ?: 'optica';
         $slug = $base;

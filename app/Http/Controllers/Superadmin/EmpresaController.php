@@ -85,7 +85,7 @@ class EmpresaController extends Controller
 
         $admins = Usuario::where('nit_empresa', $nit)
             ->where('id_rol', config('visioptica.rol_admin'))
-            ->get(['documento', 'nombres', 'apellido', 'email', 'ultimo_acceso']);
+            ->get(['documento', 'nombres', 'apellido', 'email', 'ultimo_acceso', 'id_estado']);
 
         $inicioMes = now()->startOfMonth();
 
@@ -131,10 +131,13 @@ class EmpresaController extends Controller
         $empresa = Empresa::findOrFail($nit);
         $pendiente = $empresa->estaPendiente();
 
+        // El NIT se guarda como número: sin puntos ni guion (800000000-9 → 8000000009).
+        $request->merge(['nit' => \App\Support\Nit::normalizar($request->input('nit'))]);
+
         $reglas = $this->reglasEmpresa($empresa);
 
         // Todos los campos se pueden editar, incluido el NIT (se cambia en cascada en todas las tablas).
-        $reglas['nit'] = ['required', 'string', 'max:20', Rule::unique('empresa', 'nit')->ignore($empresa->nit, 'nit')];
+        $reglas['nit'] = array_merge(\App\Support\Nit::reglas(), [Rule::unique('empresa', 'nit')->ignore($empresa->nit, 'nit')]);
 
         if ($pendiente) {
             // Óptica nueva que aún no se aprueba: el PDF solo hace falta si no tiene uno; la verificación
@@ -148,8 +151,8 @@ class EmpresaController extends Controller
 
         $data = $request->validate($reglas, $this->mensajesVerificacion(), $this->nombresCampos());
 
-        $nuevoNit = trim($data['nit']);
-        $cambioNit = $nuevoNit !== $empresa->nit;
+        $nuevoNit = (string) \App\Support\Nit::normalizar($data['nit']);
+        $cambioNit = $nuevoNit !== (string) $empresa->nit;
 
         $anterior = $empresa->camara_de_comercio;
         $rutaCamara = $request->hasFile('camara_comercio')
@@ -273,17 +276,26 @@ class EmpresaController extends Controller
 
         // El superadmin activa o desactiva al administrador (uno inactivo no puede entrar).
         $activar = $request->boolean('activo');
-        if ($activar && in_array((int) $admin->id_estado, [2, 4], true)) {
-            $cambios['id_estado'] = 1;
-        } elseif (! $activar && ! in_array((int) $admin->id_estado, [2, 4], true)) {
-            $cambios['id_estado'] = 2;
+        $estabaInactivo = \App\Support\BloqueoUsuarios::estaInactivo($admin) || (int) $admin->id_estado === 4;
+        $cambioEstado = null;
+        if ($activar && $estabaInactivo) {
+            $cambioEstado = 'activar';
+        } elseif (! $activar && ! $estabaInactivo) {
+            $cambioEstado = 'inactivar';
         }
 
         $admin->update($cambios);
 
+        if ($cambioEstado === 'activar') {
+            $admin = $admin->fresh();
+            \App\Support\BloqueoUsuarios::activar($admin, 'Administrador activado por VisiOptica');
+        } elseif ($cambioEstado === 'inactivar') {
+            \App\Support\BloqueoUsuarios::inactivar($admin->fresh(), 'Administrador desactivado por VisiOptica');
+        }
+
         Actividad::registrar($empresa->nit, 'editar',
             "Administrador {$admin->nombres} actualizado por el superadmin" . ($conClave ? ' (nueva contraseña)' : '')
-            . (isset($cambios['id_estado']) && $cambios['id_estado'] === 2 ? ' (desactivado)' : ''),
+            . ($cambioEstado === 'inactivar' ? ' (desactivado)' : ''),
             'usuario', $admin->documento);
 
         return redirect()->route('superadmin.empresas.admins', $empresa->nit)
@@ -346,6 +358,33 @@ class EmpresaController extends Controller
             . ($avisada ? ' Le enviamos la confirmación por correo.' : ' No se pudo enviar el correo de confirmación.'));
     }
 
+    /**
+     * Activa o desactiva a un administrador de la óptica. Sirve sobre todo cuando
+     * el administrador quedó inactivo por intentos fallidos y no hay nadie más
+     * en su óptica que pueda activarlo.
+     */
+    public function cambiarEstadoUsuario(string $nit, string $documento): RedirectResponse
+    {
+        $usuario = Usuario::where('nit_empresa', $nit)->where('documento', $documento)->firstOrFail();
+
+        if ($usuario->esSuperadmin()) {
+            abort(404);
+        }
+
+        $nombre = trim($usuario->nombres . ' ' . $usuario->apellido);
+
+        if (\App\Support\BloqueoUsuarios::estaInactivo($usuario)) {
+            $correo = \App\Support\BloqueoUsuarios::activar($usuario, 'Usuario activado por VisiOptica');
+
+            return back()->with('success', "{$nombre} fue activado y ya puede iniciar sesión."
+                . ($correo ? ' Se le envió un correo avisándole.' : ' (No se pudo enviar el correo de aviso.)'));
+        }
+
+        \App\Support\BloqueoUsuarios::inactivar($usuario, 'Usuario desactivado por VisiOptica');
+
+        return back()->with('success', "{$nombre} fue desactivado.");
+    }
+
     protected function reglasEmpresa(?Empresa $empresa = null): array
     {
         return [
@@ -361,7 +400,7 @@ class EmpresaController extends Controller
 
     protected function mensajesVerificacion(): array
     {
-        return array_merge(CamaraComercio::mensajes(), [
+        return array_merge(CamaraComercio::mensajes(), \App\Support\Nit::mensajes(), [
             'confirmo.accepted' => 'Marca la casilla para confirmar que verificaste el NIT con la Cámara de Comercio.',
         ]);
     }

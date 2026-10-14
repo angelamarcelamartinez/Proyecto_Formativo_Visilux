@@ -140,7 +140,7 @@ return [
         'display_column' => 'nombres',
         'search_columns' => ['nombres', 'apellido', 'email', 'documento', 'telefono', 'rol_u.nombre_rol'],
         'model' => 'Usuario',
-        'list_columns' => ['documento', 'nombres', 'apellido', 'telefono', 'email', 'id_rol'],
+        'list_columns' => ['documento', 'nombres', 'apellido', 'telefono', 'email', 'id_rol', 'id_estado'],
         'filters' => ['id_rol', 'id_estado'],
         'export' => true,
         'joins' => [

@@ -33,7 +33,7 @@
                 </div>
 
                 <!-- FORMULARIO DE REGISTRO -->
-                <form method="POST" action="{{ route('register') }}" novalidate>
+                <form method="POST" action="{{ route('register') }}" novalidate data-validar>
                     @csrf
 
                     <!-- CAMPO ÓPTICA -->
@@ -87,7 +87,8 @@
                             <span class="input-group-text bg-light border-end-0">
                                 <i class="bi bi-card-text text-muted"></i>
                             </span>
-                            <input type="number"
+                            <input type="text" inputmode="numeric" maxlength="11"
+                                   data-v="documento" data-v-tipo="#id_tipo_docu" data-v-max-valor="2147483647"
                                    class="form-control border-start-0 login-input @error('documento') is-invalid @enderror"
                                    id="documento"
                                    name="documento"
@@ -116,6 +117,7 @@
                                    name="nombres" 
                                    value="{{ old('nombres') }}" 
                                    placeholder="Tus nombres" 
+                                   maxlength="100" data-v="nombre"
                                    required>
                         </div>
                         @error('nombres')
@@ -138,6 +140,7 @@
                                    name="apellido"
                                    value="{{ old('apellido') }}"
                                    placeholder="Tus apellidos"
+                                   maxlength="100" data-v="nombre"
                                    required>
                         </div>
                         @error('apellido')
@@ -160,6 +163,7 @@
                                    name="telefono"
                                    value="{{ old('telefono') }}"
                                    placeholder="Ej: 3001234567"
+                                   maxlength="10" inputmode="tel" data-v="telefono"
                                    required>
                         </div>
                         @error('telefono')
@@ -182,6 +186,7 @@
                                    name="email" 
                                    value="{{ old('email') }}" 
                                    placeholder="tu@correo.com" 
+                                   maxlength="100" data-v="email"
                                    required>
                         </div>
                         @error('email')
@@ -202,7 +207,8 @@
                                    class="form-control border-start-0 login-input @error('password') is-invalid @enderror" 
                                    id="password" 
                                    name="password" 
-                                   placeholder="••••••••" 
+                                   placeholder="Mínimo 8 caracteres" 
+                                   data-v="password" autocomplete="new-password"
                                    required>
                         </div>
                         @error('password')
@@ -224,6 +230,7 @@
                                    id="password-confirm" 
                                    name="password_confirmation" 
                                    placeholder="••••••••" 
+                                   data-v-igual="#password" autocomplete="new-password"
                                    required>
                         </div>
                     </div>
@@ -377,5 +384,7 @@
         document.getElementById('modalTerminos').addEventListener('shown.bs.modal', habilitarBoton);
     });
 </script>
+    <!-- Validación en línea de los formularios (verde = bien, rojo = mal) -->
+    <script src="{{ asset('assets/js/validacion-en-linea.js') }}?v={{ @filemtime(public_path('assets/js/validacion-en-linea.js')) }}"></script>
 </body>
 </html>

@@ -25,8 +25,8 @@
                 <p class="footer-text small opacity-90 mb-3">
                     Recibe consejos de salud visual y promociones exclusivas.
                 </p>
-                <form class="newsletter-form d-flex gap-2" action="#" method="post" onsubmit="return false;">
-                    <input type="email" class="form-control rounded-pill border-0" placeholder="correo electrónico" required>
+                <form class="newsletter-form d-flex gap-2" action="#" method="post" onsubmit="return false;" novalidate data-validar>
+                    <input type="email" class="form-control rounded-pill border-0" placeholder="correo electrónico" data-v="email" data-v-sin-mensaje required>
                     <button type="submit" class="btn btn-light rounded-pill px-4 fw-semibold text-primary flex-shrink-0">
                         Suscribirse
                     </button>
@@ -67,5 +67,7 @@
 </footer>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<!-- Validación en línea de los formularios (verde = bien, rojo = mal) -->
+<script src="{{ asset('assets/js/validacion-en-linea.js') }}?v={{ @filemtime(public_path('assets/js/validacion-en-linea.js')) }}"></script>
 </body>
 </html>

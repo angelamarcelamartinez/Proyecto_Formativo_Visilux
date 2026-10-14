@@ -76,5 +76,7 @@
             @yield('content')
         </main>
     </div>
+    <!-- Validación en línea de los formularios (verde = bien, rojo = mal) -->
+    <script src="{{ asset('assets/js/validacion-en-linea.js') }}?v={{ @filemtime(public_path('assets/js/validacion-en-linea.js')) }}"></script>
 </body>
 </html>

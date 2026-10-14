@@ -46,7 +46,7 @@
                 @endif
 
                 <!-- FORMULARIO -->
-                <form method="POST" action="{{ route('superadmin.login.attempt') }}" novalidate>
+                <form method="POST" action="{{ route('superadmin.login.attempt') }}" novalidate data-validar>
                     @csrf
 
                     <div class="mb-3">
@@ -61,6 +61,7 @@
                                    name="email" 
                                    value="{{ old('email') }}" 
                                    placeholder="superadmin@correo.com" 
+                                   data-v="email" maxlength="100"
                                    required 
                                    autofocus>
                         </div>
@@ -114,5 +115,7 @@
 
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Validación en línea de los formularios (verde = bien, rojo = mal) -->
+    <script src="{{ asset('assets/js/validacion-en-linea.js') }}?v={{ @filemtime(public_path('assets/js/validacion-en-linea.js')) }}"></script>
 </body>
 </html>

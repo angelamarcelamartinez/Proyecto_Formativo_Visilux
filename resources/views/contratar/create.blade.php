@@ -34,7 +34,7 @@
 <section class="py-5">
     <div class="container py-2">
 
-        <form method="POST" action="{{ route('contratar.store', $plan->id_plan) }}" enctype="multipart/form-data" novalidate>
+        <form method="POST" action="{{ route('contratar.store', $plan->id_plan) }}" enctype="multipart/form-data" novalidate data-validar>
             @csrf
 
             <div class="row g-4">
@@ -57,38 +57,40 @@
                         <div class="row g-3">
                             <div class="col-md-8">
                                 <label for="nombre" class="form-label fw-medium">Nombre de la óptica</label>
-                                <input type="text" id="nombre" name="nombre" value="{{ old('nombre') }}" class="{{ $campo('nombre') }}" required>
+                                <input type="text" id="nombre" name="nombre" value="{{ old('nombre') }}" class="{{ $campo('nombre') }}" maxlength="150" data-v="razon-social" required>
                                 @error('nombre') <span class="invalid-feedback d-block">{{ $message }}</span> @enderror
                             </div>
                             <div class="col-md-4">
                                 <label for="nit" class="form-label fw-medium">NIT</label>
-                                <input type="text" id="nit" name="nit" value="{{ old('nit') }}" placeholder="900123456-7" class="{{ $campo('nit') }}" required>
+                                {{-- Máscara 800000000-9: se ve con puntos y guion, pero se guarda solo el número (8000000009) --}}
+                                <input type="text" id="nit" name="nit" value="{{ old('nit') }}" placeholder="800197268-4" class="{{ $campo('nit') }}" data-v="nit" required>
+                                <span class="form-text">9 dígitos + dígito de verificación, como aparece en el RUT.</span>
                                 @error('nit') <span class="invalid-feedback d-block">{{ $message }}</span> @enderror
                             </div>
                             <div class="col-md-6">
                                 <label for="email" class="form-label fw-medium">Correo de la óptica</label>
-                                <input type="email" id="email" name="email" value="{{ old('email') }}" class="{{ $campo('email') }}" required>
+                                <input type="email" id="email" name="email" value="{{ old('email') }}" class="{{ $campo('email') }}" maxlength="150" data-v="email" required>
                                 <span class="form-text">Aquí llegan los avisos de pago y de vencimiento.</span>
                                 @error('email') <span class="invalid-feedback d-block">{{ $message }}</span> @enderror
                             </div>
                             <div class="col-md-6">
                                 <label for="telefono" class="form-label fw-medium">Teléfono</label>
-                                <input type="text" id="telefono" name="telefono" value="{{ old('telefono') }}" class="{{ $campo('telefono') }}" required>
+                                <input type="tel" id="telefono" name="telefono" value="{{ old('telefono') }}" class="{{ $campo('telefono') }}" maxlength="10" placeholder="601 234 5678 o 300 123 4567" data-v="telefono" required>
                                 @error('telefono') <span class="invalid-feedback d-block">{{ $message }}</span> @enderror
                             </div>
                             <div class="col-md-5">
                                 <label for="ciudad" class="form-label fw-medium">Ciudad</label>
-                                <input type="text" id="ciudad" name="ciudad" value="{{ old('ciudad') }}" class="{{ $campo('ciudad') }}" required>
+                                <input type="text" id="ciudad" name="ciudad" value="{{ old('ciudad') }}" class="{{ $campo('ciudad') }}" maxlength="100" data-v="ciudad" required>
                                 @error('ciudad') <span class="invalid-feedback d-block">{{ $message }}</span> @enderror
                             </div>
                             <div class="col-md-7">
                                 <label for="direccion" class="form-label fw-medium">Dirección <span class="text-muted fw-normal">(opcional)</span></label>
-                                <input type="text" id="direccion" name="direccion" value="{{ old('direccion') }}" class="{{ $campo('direccion') }}">
+                                <input type="text" id="direccion" name="direccion" value="{{ old('direccion') }}" class="{{ $campo('direccion') }}" maxlength="200" placeholder="Calle 12 # 34-56" data-v="direccion">
                                 @error('direccion') <span class="invalid-feedback d-block">{{ $message }}</span> @enderror
                             </div>
                             <div class="col-12">
                                 <label for="camara_comercio" class="form-label fw-medium">Certificado de la Cámara de Comercio <span class="text-muted fw-normal">(PDF, máx. 5 MB)</span></label>
-                                <input type="file" id="camara_comercio" name="camara_comercio" accept="application/pdf,.pdf" class="{{ $campo('camara_comercio') }}" required>
+                                <input type="file" id="camara_comercio" name="camara_comercio" accept="application/pdf,.pdf" class="{{ $campo('camara_comercio') }}" data-v="pdf" data-v-max-mb="5" required>
                                 <span class="form-text">Certificado de existencia y representación legal. Con él verificamos que tu NIT existe antes de activar la óptica.</span>
                                 @error('camara_comercio') <span class="invalid-feedback d-block">{{ $message }}</span> @enderror
                             </div>
@@ -103,27 +105,27 @@
                         <div class="row g-3">
                             <div class="col-md-6">
                                 <label for="admin_nombres" class="form-label fw-medium">Nombres</label>
-                                <input type="text" id="admin_nombres" name="admin_nombres" value="{{ old('admin_nombres') }}" class="{{ $campo('admin_nombres') }}" required>
+                                <input type="text" id="admin_nombres" name="admin_nombres" value="{{ old('admin_nombres') }}" class="{{ $campo('admin_nombres') }}" maxlength="100" data-v="nombre" required>
                                 @error('admin_nombres') <span class="invalid-feedback d-block">{{ $message }}</span> @enderror
                             </div>
                             <div class="col-md-6">
                                 <label for="admin_apellido" class="form-label fw-medium">Apellidos</label>
-                                <input type="text" id="admin_apellido" name="admin_apellido" value="{{ old('admin_apellido') }}" class="{{ $campo('admin_apellido') }}" required>
+                                <input type="text" id="admin_apellido" name="admin_apellido" value="{{ old('admin_apellido') }}" class="{{ $campo('admin_apellido') }}" maxlength="100" data-v="nombre" required>
                                 @error('admin_apellido') <span class="invalid-feedback d-block">{{ $message }}</span> @enderror
                             </div>
                             <div class="col-md-6">
                                 <label for="admin_documento" class="form-label fw-medium">Número de cédula</label>
-                                <input type="text" inputmode="numeric" id="admin_documento" name="admin_documento" value="{{ old('admin_documento') }}" class="{{ $campo('admin_documento') }}" required>
+                                <input type="text" inputmode="numeric" id="admin_documento" name="admin_documento" value="{{ old('admin_documento') }}" class="{{ $campo('admin_documento') }}" maxlength="10" data-v="documento" data-v-max-valor="2147483647" required>
                                 @error('admin_documento') <span class="invalid-feedback d-block">{{ $message }}</span> @enderror
                             </div>
                             <div class="col-md-6">
                                 <label for="admin_telefono" class="form-label fw-medium">Celular</label>
-                                <input type="text" inputmode="tel" id="admin_telefono" name="admin_telefono" value="{{ old('admin_telefono') }}" class="{{ $campo('admin_telefono') }}" required>
+                                <input type="text" inputmode="tel" id="admin_telefono" name="admin_telefono" value="{{ old('admin_telefono') }}" class="{{ $campo('admin_telefono') }}" maxlength="10" placeholder="300 123 4567" data-v="celular" required>
                                 @error('admin_telefono') <span class="invalid-feedback d-block">{{ $message }}</span> @enderror
                             </div>
                             <div class="col-12">
                                 <label for="admin_email" class="form-label fw-medium">Correo para entrar al panel</label>
-                                <input type="email" id="admin_email" name="admin_email" value="{{ old('admin_email') }}" class="{{ $campo('admin_email') }}" required>
+                                <input type="email" id="admin_email" name="admin_email" value="{{ old('admin_email') }}" class="{{ $campo('admin_email') }}" maxlength="100" data-v="email" required>
                                 <span class="form-text">Es tu usuario para entrar al panel. La contraseña temporal llega al correo de la óptica.</span>
                                 @error('admin_email') <span class="invalid-feedback d-block">{{ $message }}</span> @enderror
                             </div>
@@ -140,7 +142,7 @@
                     @endif
 
                     <div class="form-check mb-4">
-                        <input class="form-check-input @error('acepto') is-invalid @enderror" type="checkbox" value="1" id="acepto" name="acepto" @checked(old('acepto'))>
+                        <input class="form-check-input @error('acepto') is-invalid @enderror" type="checkbox" value="1" id="acepto" name="acepto" @checked(old('acepto')) required>
                         <label class="form-check-label" for="acepto">
                             Acepto los términos del servicio de VisiOptica y el tratamiento de los datos de mi óptica.
                         </label>

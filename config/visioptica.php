@@ -12,7 +12,8 @@ return [
 
     // Óptica que se muestra en la página principal ("/").
     // Las demás se ven en /optica/{slug}.
-    'empresa_principal' => env('VISIOPTICA_EMPRESA_PRINCIPAL', '900000000-1'),
+    // El NIT va como número, sin puntos ni guion (900.000.000-1 → 9000000001).
+    'empresa_principal' => (int) env('VISIOPTICA_EMPRESA_PRINCIPAL', 9000000001),
 
     // Con cuántos días de anticipación se avisa que la licencia va a vencer.
     'dias_aviso' => 30,

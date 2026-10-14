@@ -124,14 +124,14 @@
                     </div>
                 @endif
 
-                <form method="POST" action="{{ route('conocenos.contacto') }}">
+                <form method="POST" action="{{ route('conocenos.contacto') }}" novalidate data-validar>
                     @csrf
 
                     <div class="mb-3">
                         <label for="nombre" class="form-label fw-medium">Nombre</label>
                         <input type="text"
                                class="form-control @error('nombre') is-invalid @enderror"
-                               id="nombre" name="nombre" value="{{ old('nombre') }}" required>
+                               id="nombre" name="nombre" value="{{ old('nombre') }}" maxlength="150" data-v="nombre" required>
                         @error('nombre')
                             <span class="invalid-feedback d-block">{{ $message }}</span>
                         @enderror
@@ -141,7 +141,7 @@
                         <label for="correo" class="form-label fw-medium">Correo electrónico</label>
                         <input type="email"
                                class="form-control @error('correo') is-invalid @enderror"
-                               id="correo" name="correo" value="{{ old('correo') }}" required>
+                               id="correo" name="correo" value="{{ old('correo') }}" maxlength="150" data-v="email" required>
                         @error('correo')
                             <span class="invalid-feedback d-block">{{ $message }}</span>
                         @enderror
@@ -151,7 +151,7 @@
                         <label for="telefono" class="form-label fw-medium">Teléfono (opcional)</label>
                         <input type="text"
                                class="form-control @error('telefono') is-invalid @enderror"
-                               id="telefono" name="telefono" value="{{ old('telefono') }}">
+                               id="telefono" name="telefono" value="{{ old('telefono') }}" maxlength="10" inputmode="tel" placeholder="300 123 4567" data-v="telefono">
                         @error('telefono')
                             <span class="invalid-feedback d-block">{{ $message }}</span>
                         @enderror
@@ -160,7 +160,7 @@
                     <div class="mb-4">
                         <label for="mensaje" class="form-label fw-medium">Mensaje</label>
                         <textarea class="form-control @error('mensaje') is-invalid @enderror"
-                                  id="mensaje" name="mensaje" rows="4" required>{{ old('mensaje') }}</textarea>
+                                  id="mensaje" name="mensaje" rows="4" minlength="10" maxlength="2000" required>{{ old('mensaje') }}</textarea>
                         @error('mensaje')
                             <span class="invalid-feedback d-block">{{ $message }}</span>
                         @enderror

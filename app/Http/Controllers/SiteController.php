@@ -20,8 +20,8 @@ class SiteController extends Controller
      */
     public function inicio()
     {
-        $empresa = Empresa::find(config('visioptica.empresa_principal'));
-        abort_unless($empresa, 404);
+        $empresa = Empresa::principal();
+        abort_unless($empresa, 404, 'No hay ninguna óptica registrada. Ejecuta los scripts SQL de database/sql y vuelve a intentar.');
 
         return $this->mostrarPagina($empresa);
     }

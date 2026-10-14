@@ -7,17 +7,9 @@
                      background: linear-gradient(135deg, #1f3b57, #2c7a7b); box-shadow: 0 10px 24px -12px rgba(0,0,0,.45); }
     .tarjeta-vista .numero { font-size: 1.3rem; letter-spacing: 2px; font-variant-numeric: tabular-nums; }
     .tarjeta-vista .etiqueta { font-size: .65rem; opacity: .7; text-transform: uppercase; letter-spacing: 1px; }
-    .aviso-simulado { background: #fff8e6; border: 1px solid #f3dca3; border-radius: 12px; font-size: .875rem; }
 </style>
 
 @php $campoTarjeta = fn ($name) => 'form-control' . ($errors->has($name) ? ' is-invalid' : ''); @endphp
-
-<div class="aviso-simulado p-3 mb-4">
-    <i class="bi bi-info-circle me-1"></i>
-    <strong>Pago simulado:</strong> no se hace ningún cobro real y no guardamos el número de tu tarjeta.
-    Para probar sirve cualquier número de 16 dígitos, una fecha futura (MM/AA) y cualquier CVV de 3 o 4 dígitos.
-    Con <code>4000 0000 0000 0002</code> el pago sale rechazado.
-</div>
 
 <div class="row g-4 align-items-center">
     <div class="col-md-5 order-md-2">
@@ -45,24 +37,24 @@
             <div class="col-12">
                 <label for="tarjeta_numero" class="form-label fw-medium">Número de la tarjeta</label>
                 <input type="text" inputmode="numeric" autocomplete="cc-number" id="tarjeta_numero" name="tarjeta_numero"
-                       maxlength="23" placeholder="0000 0000 0000 0000" class="{{ $campoTarjeta('tarjeta_numero') }}" required>
+                       maxlength="19" placeholder="0000 0000 0000 0000" class="{{ $campoTarjeta('tarjeta_numero') }}" data-v="tarjeta" required>
                 @error('tarjeta_numero') <span class="invalid-feedback d-block">{{ $message }}</span> @enderror
             </div>
             <div class="col-12">
                 <label for="tarjeta_titular" class="form-label fw-medium">Nombre como aparece en la tarjeta</label>
-                <input type="text" autocomplete="cc-name" id="tarjeta_titular" name="tarjeta_titular" value="{{ old('tarjeta_titular') }}" class="{{ $campoTarjeta('tarjeta_titular') }}" required>
+                <input type="text" autocomplete="cc-name" id="tarjeta_titular" name="tarjeta_titular" value="{{ old('tarjeta_titular') }}" class="{{ $campoTarjeta('tarjeta_titular') }}" maxlength="100" data-v="nombre" required>
                 @error('tarjeta_titular') <span class="invalid-feedback d-block">{{ $message }}</span> @enderror
             </div>
             <div class="col-6">
                 <label for="tarjeta_vencimiento" class="form-label fw-medium">Vencimiento</label>
                 <input type="text" inputmode="numeric" autocomplete="cc-exp" id="tarjeta_vencimiento" name="tarjeta_vencimiento"
-                       value="{{ old('tarjeta_vencimiento') }}" maxlength="5" placeholder="MM/AA" class="{{ $campoTarjeta('tarjeta_vencimiento') }}" required>
+                       value="{{ old('tarjeta_vencimiento') }}" maxlength="5" placeholder="MM/AA" class="{{ $campoTarjeta('tarjeta_vencimiento') }}" data-v="vencimiento" required>
                 @error('tarjeta_vencimiento') <span class="invalid-feedback d-block">{{ $message }}</span> @enderror
             </div>
             <div class="col-6">
                 <label for="tarjeta_cvv" class="form-label fw-medium">CVV</label>
                 <input type="password" inputmode="numeric" autocomplete="cc-csc" id="tarjeta_cvv" name="tarjeta_cvv"
-                       maxlength="4" placeholder="123" class="{{ $campoTarjeta('tarjeta_cvv') }}" required>
+                       maxlength="4" placeholder="123" class="{{ $campoTarjeta('tarjeta_cvv') }}" data-v="cvv" required>
                 @error('tarjeta_cvv') <span class="invalid-feedback d-block">{{ $message }}</span> @enderror
             </div>
         </div>
@@ -81,7 +73,7 @@
             : /^3[47]/.test(n) ? 'American Express' : 'Tarjeta';
 
         num.addEventListener('input', () => {
-            const d = num.value.replace(/\D/g, '').slice(0, 19);
+            const d = num.value.replace(/\D/g, '').slice(0, 16);
             num.value = d.replace(/(.{4})/g, '$1 ').trim();
             document.getElementById('vistaNumero').textContent =
                 (d + '•'.repeat(Math.max(0, 16 - d.length))).replace(/(.{4})/g, '$1 ').trim();

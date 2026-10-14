@@ -38,6 +38,28 @@
                                        class="p-2 rounded-lg text-olive-600 hover:bg-olive-100" title="Editar">
                                         @include('partials.icon', ['name' => 'pencil', 'class' => 'w-4 h-4'])
                                     </a>
+                                    @if ($table === 'usuario' && (string) $rowId !== (string) auth()->id() && (int) $row->id_rol !== 1)
+                                        {{-- Activar / desactivar el acceso del usuario --}}
+                                        @php $inactivo = (int) $row->id_estado === \App\Support\BloqueoUsuarios::ESTADO_INACTIVO; @endphp
+                                        <form method="POST" action="{{ route('admin.usuario.estado', $rowId) }}"
+                                              onsubmit="return confirm('{{ $inactivo ? '¿Activar este usuario? Podrá volver a iniciar sesión.' : '¿Desactivar este usuario? No podrá iniciar sesión hasta que lo actives.' }}');">
+                                            @csrf
+                                            @if ($inactivo)
+                                                <button type="submit" title="Activar usuario"
+                                                        class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium text-emerald-700 bg-emerald-50 hover:bg-emerald-50">
+                                                    @include('partials.icon', ['name' => 'user', 'class' => 'w-4 h-4'])
+                                                    Activar
+                                                </button>
+                                            @else
+                                                <button type="submit" title="Desactivar usuario"
+                                                        class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium text-red-600 bg-red-50 hover:bg-red-50">
+                                                    @include('partials.icon', ['name' => 'lock', 'class' => 'w-4 h-4'])
+                                                    Desactivar
+                                                </button>
+                                            @endif
+                                        </form>
+                                    @endif
+                                    @if ($table !== 'usuario') {{-- los usuarios no se eliminan, se desactivan --}}
                                     <form method="POST" action="{{ route('admin.crud.destroy', [$table, $rowId]) }}"
                                           onsubmit="return confirm('¿Eliminar este registro? Esta acción no se puede deshacer.');">
                                         @csrf
@@ -46,6 +68,7 @@
                                             @include('partials.icon', ['name' => 'trash', 'class' => 'w-4 h-4'])
                                         </button>
                                     </form>
+                                    @endif
                                     @endunless
                                 </div>
 

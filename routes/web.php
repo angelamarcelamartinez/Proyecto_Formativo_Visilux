@@ -61,6 +61,14 @@ Route::middleware('guest')->group(function () {
     Route::get('/login', [LoginController::class, 'showLoginForm'])->name('login');
     Route::post('/login', [LoginController::class, 'login'])->name('login.attempt');
 
+    // Validación en línea del correo en el login (máx. 30 consultas por minuto)
+    Route::post('/login/verificar-email', [LoginController::class, 'verificarEmail'])
+        ->middleware('throttle:30,1,verificar-email')->name('login.verificar-email');
+
+    // Ventana "Tu cuenta ha sido inactivada" → botón "Enviar tu solicitud" (correo al administrador)
+    Route::post('/login/solicitar-reactivacion', [LoginController::class, 'solicitarReactivacion'])
+        ->middleware('throttle:5,1,reactivacion')->name('login.solicitar-reactivacion');
+
     // Registro
     Route::get('/register', [RegisterController::class, 'showRegistrationForm'])->name('register');
     Route::post('/register', [RegisterController::class, 'register']);
@@ -111,6 +119,8 @@ Route::prefix('superadmin')->middleware(['superadmin'])->name('superadmin.')->gr
 
     // Licencias: historial (con descarga) y ópticas que requieren atención
     Route::get('/licencias', [SuperLicenciaController::class, 'index'])->name('licencias.index');
+    // Activar / desactivar a un administrador de la óptica (p. ej. inactivado por intentos fallidos)
+    Route::post('/opticas/{nit}/usuarios/{documento}/estado', [SuperEmpresaController::class, 'cambiarEstadoUsuario'])->name('empresas.usuario.estado');
 
     // Aprobar o rechazar pagos (se hace desde el Panel general)
     Route::post('/licencias/{id}/aprobar', [SuperLicenciaController::class, 'aprobar'])->name('licencias.aprobar');
@@ -152,6 +162,10 @@ Route::prefix('admin')->middleware(['auth', 'cambiar.password', 'admin', 'licenc
     Route::get('/citas-control', [ControlController::class, 'index'])->name('control.index');
     Route::post('/citas-control/enviar-todos', [ControlController::class, 'enviarTodos'])->name('control.enviarTodos');
     Route::post('/citas-control/{documento}/enviar', [ControlController::class, 'enviar'])->name('control.enviar');
+
+    // Activar / desactivar usuarios (botón junto a Editar y Eliminar)
+    Route::post('/usuario/{documento}/estado', [\App\Http\Controllers\Admin\UsuarioEstadoController::class, 'cambiar'])
+        ->name('usuario.estado');
 
     // CRUD genérico
     // Autocompletar datos del paciente por documento (citas, fórmulas médicas)

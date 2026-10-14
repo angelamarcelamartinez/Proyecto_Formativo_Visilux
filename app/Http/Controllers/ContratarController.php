@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Plan;
 use App\Support\CamaraComercio;
+use App\Support\Nit;
 use App\Support\PagoSimulado;
 use App\Support\RegistroOptica;
 use Illuminate\Http\RedirectResponse;
@@ -30,6 +31,9 @@ class ContratarController extends Controller
     {
         abort_unless($plan->activo, 404);
 
+        // El NIT llega con máscara (800000000-9); se guarda solo con dígitos (8000000009).
+        $request->merge(['nit' => Nit::normalizar($request->input('nit'))]);
+
         $reglasPago = $plan->precio > 0 ? [
             'tarjeta_titular' => ['required', 'string', 'max:100'],
             'tarjeta_numero' => ['required', 'string', 'max:23'],
@@ -39,7 +43,7 @@ class ContratarController extends Controller
 
         $datos = $request->validate(array_merge([
             'nombre' => ['required', 'string', 'max:150'],
-            'nit' => ['required', 'string', 'max:20', 'regex:/^[0-9-]+$/', 'unique:empresa,nit'],
+            'nit' => array_merge(Nit::reglas(), ['unique:empresa,nit']),
             'email' => ['required', 'email', 'max:150'],
             'telefono' => ['required', 'string', 'max:20'],
             'ciudad' => ['required', 'string', 'max:100'],
@@ -53,7 +57,7 @@ class ContratarController extends Controller
             'acepto' => ['accepted'],
             // Certificado de existencia y representación legal (Cámara de Comercio)
             'camara_comercio' => CamaraComercio::reglas(),
-        ], $reglasPago), array_merge(CamaraComercio::mensajes(), [
+        ], $reglasPago), array_merge(CamaraComercio::mensajes(), Nit::mensajes(), [
             'nit.unique' => 'Ya hay una óptica registrada con ese NIT.',
             'admin_email.unique' => 'Ese correo ya tiene una cuenta. Usa otro para el administrador.',
             'admin_documento.unique' => 'Ya existe un usuario con ese documento.',

@@ -39,7 +39,7 @@
                 @endif
 
                 <!-- FORMULARIO DE ENVÍO DE EMAIL -->
-                <form method="POST" action="{{ route('password.email') }}" novalidate>
+                <form method="POST" action="{{ route('password.email') }}" novalidate data-validar>
                     @csrf
                     @php $desdeSuperadmin = request('origen', old('origen')) === 'superadmin'; @endphp
                     @if ($desdeSuperadmin)
@@ -58,6 +58,7 @@
                                    name="email" 
                                    value="{{ old('email') }}" 
                                    placeholder="tu@correo.com" 
+                                   data-v="email" maxlength="100"
                                    required 
                                    autofocus>
                         </div>
@@ -83,5 +84,7 @@
 
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Validación en línea de los formularios (verde = bien, rojo = mal) -->
+    <script src="{{ asset('assets/js/validacion-en-linea.js') }}?v={{ @filemtime(public_path('assets/js/validacion-en-linea.js')) }}"></script>
 </body>
 </html>

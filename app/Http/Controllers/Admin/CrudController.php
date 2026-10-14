@@ -870,6 +870,12 @@ class CrudController extends Controller
             return back()->withInput()->withErrors($error);
         }
 
+        // ¿Se está activando un usuario que estaba inactivo? (para avisarle por correo)
+        $seReactiva = $table === 'usuario'
+            && isset($data['id_estado'])
+            && (int) $data['id_estado'] !== \App\Support\BloqueoUsuarios::ESTADO_INACTIVO
+            && (int) DB::table('usuario')->where('documento', $id)->value('id_estado') === \App\Support\BloqueoUsuarios::ESTADO_INACTIVO;
+
         try {
             DB::transaction(function () use ($table, $config, $pk, $id, $data) {
                 $newId = $data[$pk] ?? null;
@@ -897,6 +903,11 @@ class CrudController extends Controller
             return back()->withInput()->withErrors([
                 'general' => $this->friendlyDbError($e),
             ]);
+        }
+
+        if ($seReactiva && ($usuario = \App\Models\Usuario::find($data[$pk] ?? $id))) {
+            \App\Support\BloqueoUsuarios::limpiar($usuario);
+            \App\Support\BloqueoUsuarios::alReactivar($usuario);
         }
 
         return redirect()
@@ -928,6 +939,10 @@ class CrudController extends Controller
             }
         }
 
+        if ($table === 'usuario' && $id !== null && ($error = $this->reglasUsuario($data, $id))) {
+            return $error;
+        }
+
         if ($table === 'asignacion_cita' && ! empty($data['fecha_cita']) && ! empty($data['hora_cita']) && ! empty($data['id_optometra'])) {
             $cancelado = \App\Support\AgendaCitas::estadoCancelado();
             $esCancelada = $cancelado && (int) ($data['id_estado'] ?? 0) === (int) $cancelado;
@@ -937,6 +952,39 @@ class CrudController extends Controller
                 ! empty($data['id_tipo_cita']) ? (int) $data['id_tipo_cita'] : null
             )) {
                 return ['hora_cita' => 'Ese optómetra ya tiene una cita que se cruza con esa hora (las terapias duran 1 hora, las demás citas 30 minutos). Escoge otra hora u otro optómetra.'];
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Al editar un usuario desde el formulario:
+     *  - nadie puede inactivarse a sí mismo;
+     *  - a otro administrador no se le puede cambiar el estado ni el rol
+     *    (si no, se podría quitarle el rol y luego desactivarlo).
+     */
+    protected function reglasUsuario(array $data, string $id): ?array
+    {
+        $actual = DB::table('usuario')->where('documento', $id)->first(['documento', 'id_rol', 'id_estado']);
+        if (! $actual) {
+            return null;
+        }
+
+        $cambia = fn (string $campo) => array_key_exists($campo, $data) && (string) $data[$campo] !== (string) $actual->{$campo};
+
+        if ((string) $actual->documento === (string) auth()->id()) {
+            return $cambia('id_estado') && (int) $data['id_estado'] === \App\Support\BloqueoUsuarios::ESTADO_INACTIVO
+                ? ['id_estado' => 'No puedes desactivar tu propia cuenta.']
+                : null;
+        }
+
+        if ((int) $actual->id_rol === 1) {
+            if ($cambia('id_estado')) {
+                return ['id_estado' => 'No puedes cambiar el estado de otro administrador.'];
+            }
+            if ($cambia('id_rol')) {
+                return ['id_rol' => 'No puedes cambiar el rol de otro administrador.'];
             }
         }
 
@@ -961,6 +1009,14 @@ class CrudController extends Controller
     public function destroy(string $table, string $id): RedirectResponse
     {
         $this->exigirEscritura($table);
+
+        // Los usuarios no se eliminan (ni administradores, ni clientes, ni nadie):
+        // si alguien no debe entrar, se desactiva.
+        if ($table === 'usuario') {
+            return back()->withErrors([
+                'general' => 'Los usuarios no se pueden eliminar. Si no debe ingresar al sistema, desactívalo.',
+            ]);
+        }
         $config = $this->tableConfig($table);
         $pk = $config['primary_key'];
 

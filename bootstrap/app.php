@@ -20,6 +20,10 @@ return Application::configure(basePath: dirname(__DIR__))
 
         // Estados de licencia al día y sesión cerrada a quien no es administrador si su licencia está inactiva
         $middleware->appendToGroup('web', \App\Http\Middleware\LicenciasAlDia::class);
+        // Saca a los usuarios inactivados aunque ya tuvieran la sesión abierta.
+        $middleware->web(append: [
+            \App\Http\Middleware\CuentaActiva::class,
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         // Si el formulario de contratar vuelve con errores, los datos de la
