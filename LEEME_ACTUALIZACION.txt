@@ -1,0 +1,10 @@
+ACTUALIZACION PANEL SUPERADMIN (reportes)
+Copia estos archivos sobre el proyecto respetando las rutas (reemplazan los anteriores).
+
+BORRAR (ya no se usan):
+  resources/views/superadmin/licencias/index.blade.php
+  resources/views/superadmin/partials/boton-estado.blade.php
+
+Luego ejecuta:
+  php artisan route:clear
+  php artisan view:clear

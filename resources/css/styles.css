@@ -1,0 +1,510 @@
+/* Visioptica — paleta y variables */
+:root {
+    --gold: #B08D3E;
+    --gold-light: #D4AF6A;
+    --charcoal: #3A3A3A;
+    --graphite: #6B6B6B;
+    --slate: #5C7080;
+    --gradient: linear-gradient(135deg, var(--charcoal) 0%, var(--gold) 100%);
+    --gradient-footer: linear-gradient(90deg, var(--charcoal) 0%, var(--gold) 100%);
+    --heading: #2A2A2A;
+    --text-muted: #6B6B6B;
+    --bg-mint: #F7F3EB;
+    --bg-light: #FAF9F7;
+    --radius-lg: 1rem;
+    --radius-xl: 1.25rem;
+    --shadow-soft: 0 0.5rem 1.5rem rgba(0, 0, 0, 0.08);
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Poppins', sans-serif;
+    color: #333;
+    background-color: #fff;
+}
+
+.text-heading {
+    color: var(--heading);
+}
+
+.text-teal {
+    color: var(--gold) !important;
+}
+
+.text-gradient {
+    background: var(--gradient);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    font-size: clamp(2rem, 5vw, 3rem);
+    font-weight: 700;
+}
+
+/* ===== Logo de marca (imagen) — NUEVO ===== */
+.navbar-logo {
+  height: 48px;
+  width: auto;
+  display: block;
+}
+
+.login-logo {
+  height: 90px;
+  width: auto;
+}
+
+.footer-logo-wrap {
+  display: inline-block;
+  background: rgba(255, 255, 255, 0.95);
+  padding: 8px 16px;
+  border-radius: 12px;
+}
+
+.footer-logo {
+  height: 38px;
+  width: auto;
+  display: block;
+}
+
+/* Navbar */
+.navbar .nav-link {
+    color: #555;
+    font-weight: 500;
+    font-size: 0.95rem;
+}
+
+.navbar .nav-link:hover,
+.navbar .nav-link.active {
+    color: var(--gold);
+}
+
+.btn-gradient {
+    background: var(--gradient);
+    border: none;
+    color: #fff;
+    font-weight: 600;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.btn-gradient:hover {
+    color: #fff;
+    transform: translateY(-1px);
+    box-shadow: 0 0.35rem 1rem rgba(176, 141, 62, 0.35);
+}
+
+.btn-outline-teal {
+    border: 2px solid var(--gold);
+    color: var(--gold);
+    width: 42px;
+    height: 42px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-outline-teal:hover {
+    background: var(--gold);
+    color: #fff;
+}
+
+.cart-link:hover {
+    color: var(--gold) !important;
+}
+
+/* Hero */
+.hero-section {
+    min-height: 85vh;
+    background: url('../img/imagen_princi.jpg') center/cover no-repeat;
+    position: relative;
+}
+
+.hero-overlay {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(105deg, rgba(30, 30, 30, 0.7) 0%, rgba(70, 70, 70, 0.35) 100%);
+}
+
+.hero-subtitle {
+    font-size: 1.1rem;
+    max-width: 520px;
+    opacity: 0.95;
+}
+
+.btn-ghost {
+    background: #fff;
+    color: var(--gold);
+    border: 2px solid transparent;
+    font-weight: 600;
+}
+
+.btn-ghost:hover {
+    background: rgba(255, 255, 255, 0.9);
+    color: var(--gold-light);
+}
+
+/* Stats bar */
+.stats-bar {
+    background: linear-gradient(90deg, #e8f8f7 0%, #eef4fc 100%);
+    box-shadow: var(--shadow-soft);
+    margin-top: -2rem;
+    position: relative;
+    z-index: 2;
+    border-radius: 0;
+}
+
+.stat-number {
+    display: block;
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--gold);
+    line-height: 1.2;
+}
+
+.stat-label {
+    color: #555;
+    font-size: 0.95rem;
+}
+
+/* Services */
+.section-services {
+    background: linear-gradient(180deg, var(--bg-light) 0%, #eef9f8 100%);
+}
+
+.section-title {
+    color: var(--heading);
+    font-size: clamp(1.75rem, 4vw, 2.25rem);
+}
+
+.service-card {
+    border-radius: var(--radius-xl);
+    overflow: hidden;
+}
+
+.service-img {
+    height: 220px;
+    object-fit: cover;
+    border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+}
+
+.service-img-bw {
+    filter: grayscale(30%);
+}
+
+.service-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: var(--bg-mint);
+    color: var(--gold);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+}
+
+.service-list li {
+    position: relative;
+    padding-left: 1.25rem;
+    margin-bottom: 0.5rem;
+    color: var(--text-muted);
+    font-size: 0.95rem;
+}
+
+.service-list li::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0.55em;
+    width: 8px;
+    height: 8px;
+    background: var(--gold);
+    border-radius: 2px;
+}
+
+/* Doctor section */
+.section-doctor {
+    background: var(--bg-mint);
+}
+
+.doctor-photo {
+    border-radius: var(--radius-xl);
+    width: 100%;
+    max-height: 480px;
+    object-fit: cover;
+}
+
+.credentials-list li {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1.25rem;
+    align-items: flex-start;
+}
+
+.credential-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: var(--gold);
+    flex-shrink: 0;
+    margin-top: 0.35rem;
+}
+
+/* Features */
+.feature-card {
+    border-radius: var(--radius-lg) !important;
+    transition: transform 0.2s;
+}
+
+.feature-card:hover {
+    transform: translateY(-4px);
+}
+
+.feature-icon {
+    width: 52px;
+    height: 52px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-size: 1.35rem;
+}
+
+.feature-icon-teal {
+    background: var(--gradient);
+}
+
+.feature-icon-blue {
+    background: linear-gradient(135deg, var(--charcoal)) 0%, var(--gold-light) 100%;
+}
+
+.info-bar {
+    background: #f0f8ff;
+    border-radius: var(--radius-lg) !important;
+    border: 1px solid rgba(30, 136, 229, 0.15) !important;
+}
+
+/* Footer */
+.site-footer {
+    background: var(--gradient-footer);
+}
+
+.footer-text {
+    line-height: 1.6;
+}
+
+.social-btn {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: 1px solid rgba(255, 255, 255, 0.5);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    text-decoration: none;
+    transition: background 0.2s;
+}
+
+.social-btn:hover {
+    background: rgba(255, 255, 255, 0.2);
+    color: #fff;
+}
+
+.newsletter-form .form-control {
+    padding: 0.65rem 1.25rem;
+}
+
+.footer-bottom {
+    background: rgba(0, 40, 100, 0.35);
+}
+
+/* Login page */
+.login-page {
+    position: relative;
+    overflow-x: hidden;
+}
+
+.login-bg {
+    position: fixed;
+    inset: 0;
+    background: linear-gradient(135deg, #2c2c2c 0%, #5c5c5c 100%);
+    z-index: -2;
+}
+
+.login-bg::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: url('../img/imagen_princi.jpg') center/cover;
+    opacity: 0.15;
+    filter: blur(2px);
+}
+
+.login-card {
+    border-radius: var(--radius-xl) !important;
+    position: relative;
+    z-index: 1;
+}
+
+.login-input:focus {
+    border-color: var(--gold);
+    box-shadow: 0 0 0 0.2rem rgba(0, 180, 180, 0.2);
+}
+
+.form-check-input:checked {
+    background-color: var(--gold);
+    border-color: var(--gold);
+}
+
+.link-teal {
+    color: var(--gold);
+    text-decoration: none;
+}
+
+.link-teal:hover {
+    color: var(--gold-light);
+    text-decoration: underline;
+}
+
+@media (max-width: 991.98px) {
+    .hero-section {
+        min-height: 70vh;
+        text-align: center;
+    }
+
+    .hero-subtitle {
+        margin-left: auto;
+        margin-right: auto;
+    }
+
+    .d-flex.flex-wrap.gap-3 {
+        justify-content: center;
+    }
+}
+
+/* =========================================
+   DIÁLOGO DE COOKIES (Visioptica)
+========================================= */
+dialog#cookieDialog.cookie-dialog {
+    position: fixed;
+    bottom: 20px;
+    top: auto;
+    margin: auto;
+    width: 90%;
+    max-width: 850px;
+    padding: 30px;
+    border: 1px solid #e2e8f0;
+    border-radius: var(--radius-xl);
+    background: #ffffff;
+    color: var(--heading);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
+    z-index: 1050;
+}
+
+dialog#cookieDialog::backdrop {
+    background: rgba(42, 42, 42, 0.6);
+    backdrop-filter: blur(4px);
+}
+
+.cookie-header {
+    margin: 0 0 15px;
+    color: var(--heading);
+    font-size: 1.4rem;
+    font-weight: 700;
+}
+
+.cookie-header i {
+    color: var(--gold);
+}
+
+.cookie-body {
+    color: var(--text-muted);
+    line-height: 1.6;
+    font-size: 0.95rem;
+    margin-bottom: 20px;
+}
+
+.cookie-body strong {
+    color: var(--gold);
+}
+
+.text-gold {
+    color: var(--gold) !important;
+}
+
+.custom-checkbox:checked {
+    background-color: var(--gold);
+    border-color: var(--gold);
+}
+
+.cookie-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.cookie-actions .btn {
+    padding: 10px 22px;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 0.9rem;
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.btn-cookie-accept {
+    background: var(--gold);
+    color: #ffffff;
+    border: none;
+}
+
+.btn-cookie-accept:hover {
+    background: var(--gold-light);
+    color: #ffffff;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(176, 141, 62, 0.3);
+}
+
+.btn-cookie-secondary {
+    background: var(--bg-light);
+    color: var(--slate);
+    border: 1px solid #cbd5e1;
+}
+
+.btn-cookie-secondary:hover {
+    background: #e2e8f0;
+    color: var(--heading);
+}
+
+.btn-cookie-deny {
+    background: transparent;
+    color: var(--text-muted);
+    border: 1px solid transparent;
+}
+
+.btn-cookie-deny:hover {
+    background: #f8fafc;
+    color: #dc3545;
+}
+
+@media (max-width: 768px) {
+    dialog#cookieDialog.cookie-dialog {
+        width: 95%;
+        padding: 20px;
+        bottom: 10px;
+    }
+    .cookie-header {
+        font-size: 1.2rem;
+    }
+    .cookie-actions {
+        flex-direction: column-reverse;
+    }
+    .cookie-actions .btn {
+        width: 100%;
+        text-align: center;
+    }
+}
