@@ -122,6 +122,9 @@ Route::prefix('superadmin')->middleware(['superadmin'])->name('superadmin.')->gr
     // Activar / desactivar a un administrador de la óptica (p. ej. inactivado por intentos fallidos)
     Route::post('/opticas/{nit}/usuarios/{documento}/estado', [SuperEmpresaController::class, 'cambiarEstadoUsuario'])->name('empresas.usuario.estado');
 
+    // Reenviar las credenciales (contraseña temporal nueva) al correo de la óptica y del administrador
+    Route::post('/opticas/{nit}/administradores/{documento}/credenciales', [SuperEmpresaController::class, 'reenviarCredenciales'])->name('empresas.admins.credenciales');
+
     // Aprobar o rechazar pagos (se hace desde el Panel general)
     Route::post('/licencias/{id}/aprobar', [SuperLicenciaController::class, 'aprobar'])->name('licencias.aprobar');
     Route::post('/licencias/{id}/rechazar', [SuperLicenciaController::class, 'rechazar'])->name('licencias.rechazar');

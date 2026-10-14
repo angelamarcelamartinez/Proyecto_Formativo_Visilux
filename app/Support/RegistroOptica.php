@@ -125,15 +125,57 @@ class RegistroOptica
         $destinos = collect([$empresa->email, $admin->email])->filter()->map(fn ($c) => trim($c))
             ->unique(fn ($c) => mb_strtolower($c))->values()->all();
         $destino = implode(', ', $destinos);
-        $enviado = true;
-        try {
-            Mail::to($destinos)->send(new CredencialesAccesoMail($empresa->fresh(), $admin, $password, $licencia->fresh('plan')));
-        } catch (\Throwable $e) {
-            report($e);
-            $enviado = false;
+        [$enviado, $error] = self::enviarCorreos($destinos, fn () => new CredencialesAccesoMail($empresa->fresh(), $admin, $password, $licencia->fresh('plan')));
+
+        return ['correo' => $destino, 'usuario' => $admin->email, 'password' => $password, 'enviado' => $enviado, 'error' => $error];
+    }
+
+    /**
+     * Genera otra contraseña temporal para el administrador y la envía de nuevo al correo de la óptica
+     * y al del administrador (por si el primer correo no llegó). Debe cambiarla en su próximo ingreso.
+     *
+     * @return array{correo: string, usuario: string, password: string, enviado: bool, error: ?string}
+     */
+    public static function reenviarCredenciales(Empresa $empresa, Usuario $admin, Licencia $licencia): array
+    {
+        $password = Str::password(10, true, true, false);
+
+        $admin->update([
+            'password' => Hash::make($password),
+            'id_estado' => self::USUARIO_PENDIENTE,
+        ]);
+
+        $destinos = collect([$empresa->email, $admin->email])->filter()->map(fn ($c) => trim($c))
+            ->unique(fn ($c) => mb_strtolower($c))->values()->all();
+
+        [$enviado, $error] = self::enviarCorreos($destinos, fn () => new CredencialesAccesoMail($empresa, $admin, $password, $licencia->loadMissing('plan')));
+
+        Actividad::registrar($empresa->nit, 'editar', 'Se generaron y reenviaron las credenciales de acceso al administrador ' . $admin->email, 'usuario', $admin->documento);
+
+        return ['correo' => implode(', ', $destinos), 'usuario' => $admin->email, 'password' => $password, 'enviado' => $enviado, 'error' => $error];
+    }
+
+    /**
+     * Envía el mismo correo a cada destinatario POR SEPARADO: si uno falla (dirección mal escrita,
+     * rechazo del proveedor…) el otro igual lo recibe. Devuelve [todos_enviados, detalle_de_fallos].
+     *
+     * @param array<int, string> $destinos
+     * @return array{0: bool, 1: ?string}
+     */
+    protected static function enviarCorreos(array $destinos, \Closure $mailable): array
+    {
+        $fallos = [];
+
+        foreach ($destinos as $destino) {
+            try {
+                Mail::to($destino)->send($mailable());
+            } catch (\Throwable $e) {
+                report($e);
+                $fallos[] = "{$destino}: " . $e->getMessage();
+            }
         }
 
-        return ['correo' => $destino, 'usuario' => $admin->email, 'password' => $password, 'enviado' => $enviado];
+        return [empty($fallos), $fallos ? implode(' | ', $fallos) : null];
     }
 
     /**

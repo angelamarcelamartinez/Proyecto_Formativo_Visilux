@@ -76,7 +76,7 @@
                                 </div>
                             @endif
 
-                            <form method="POST" action="{{ route('admin.renovacion.store') }}" autocomplete="off" class="space-y-6">
+                            <form method="POST" action="{{ route('admin.renovacion.store') }}" autocomplete="off" class="space-y-6" novalidate data-validar>
                                 @csrf
 
                                 <div>
@@ -105,21 +105,22 @@
                                     <div class="grid sm:grid-cols-2 gap-4">
                                         <div class="sm:col-span-2">
                                             <label class="block text-sm mb-1" for="t_titular">Nombre en la tarjeta</label>
-                                            <input id="t_titular" name="tarjeta_titular" value="{{ old('tarjeta_titular') }}" class="{{ $campo }}" required>
+                                            <input id="t_titular" name="tarjeta_titular" value="{{ old('tarjeta_titular') }}" class="{{ $campo }}" maxlength="100" autocomplete="cc-name" data-v="nombre" required>
                                         </div>
                                         <div class="sm:col-span-2">
                                             <label class="block text-sm mb-1" for="t_numero">Número de la tarjeta</label>
-                                            <input id="t_numero" name="tarjeta_numero" inputmode="numeric" maxlength="19" placeholder="0000 0000 0000 0000" class="{{ $campo }}" required
+                                            <input id="t_numero" name="tarjeta_numero" inputmode="numeric" maxlength="19" placeholder="0000 0000 0000 0000" class="{{ $campo }}" autocomplete="cc-number" data-v="tarjeta" required
                                                    oninput="this.value=this.value.replace(/\D/g,'').slice(0,16).replace(/(.{4})/g,'$1 ').trim()">
                                         </div>
                                         <div>
                                             <label class="block text-sm mb-1" for="t_venc">Vencimiento (MM/AA)</label>
-                                            <input id="t_venc" name="tarjeta_vencimiento" value="{{ old('tarjeta_vencimiento') }}" inputmode="numeric" maxlength="5" placeholder="MM/AA" class="{{ $campo }}" required
+                                            <input id="t_venc" name="tarjeta_vencimiento" value="{{ old('tarjeta_vencimiento') }}" inputmode="numeric" maxlength="5" placeholder="MM/AA" class="{{ $campo }}" autocomplete="cc-exp" data-v="vencimiento" required
                                                    oninput="let v=this.value.replace(/\D/g,'').slice(0,4); this.value=v.length>2 ? v.slice(0,2)+'/'+v.slice(2) : v">
                                         </div>
                                         <div>
                                             <label class="block text-sm mb-1" for="t_cvv">CVV</label>
-                                            <input id="t_cvv" name="tarjeta_cvv" type="password" inputmode="numeric" maxlength="4" class="{{ $campo }}" required>
+                                            <input id="t_cvv" name="tarjeta_cvv" type="password" inputmode="numeric" maxlength="4" placeholder="123" class="{{ $campo }}" autocomplete="cc-csc" data-v="cvv" required
+                                                   oninput="this.value=this.value.replace(/\D/g,'').slice(0,4)">
                                         </div>
                                     </div>
                                     <p class="text-[11px] text-muted mt-2">Pago de demostración: no se cobra nada real y no guardamos el número completo ni el CVV.</p>
@@ -152,5 +153,22 @@
             </div>
         </div>
     @endif
+
+@push('head')
+    <style>
+        /* Colores de la validación en línea (el script es el mismo de los formularios públicos). */
+        form[data-validar] input.is-valid { border-color: #198754 !important; }
+        form[data-validar] input.is-invalid { border-color: #dc3545 !important; background-color: #fff5f5; }
+        form[data-validar] input.is-valid:focus { box-shadow: 0 0 0 3px rgba(25,135,84,.2) !important; }
+        form[data-validar] input.is-invalid:focus { box-shadow: 0 0 0 3px rgba(220,53,69,.2) !important; }
+        .vl-feedback { font-size: .78rem; margin-top: .25rem; }
+        .vl-feedback:empty { display: none; }
+        .vl-feedback.text-danger { color: #dc3545; }
+    </style>
+@endpush
+
+@push('scripts')
+    <script src="{{ asset('assets/js/validacion-en-linea.js') }}?v={{ @filemtime(public_path('assets/js/validacion-en-linea.js')) }}"></script>
+@endpush
 
 @endsection

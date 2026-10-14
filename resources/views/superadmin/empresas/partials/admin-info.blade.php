@@ -21,6 +21,11 @@
                 · <span class="text-rose-700 font-semibold">cuenta inactiva</span>
             @endif
         </p>
+        <form method="POST" action="{{ route('superadmin.empresas.admins.credenciales', [$nit, $a->documento]) }}" class="mt-1"
+              onsubmit="return confirm('Se generará una contraseña temporal nueva y se enviará al correo de la óptica y del administrador. ¿Continuar?')">
+            @csrf
+            <button type="submit" class="text-[11px] font-semibold text-olive-700 hover:underline">Reenviar credenciales</button>
+        </form>
     </div>
 @empty
     <p class="mt-1.5 text-[11px] text-muted">Sin administrador asignado</p>

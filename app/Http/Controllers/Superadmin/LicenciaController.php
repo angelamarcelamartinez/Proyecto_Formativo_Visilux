@@ -74,7 +74,8 @@ class LicenciaController extends Controller
             }
 
             return back()->with('success', "Registro aprobado: {$licencia->empresa->nombre} ya está activa, pero no se pudo enviar el correo. "
-                . "Entrégale estos datos al administrador: usuario {$acceso['usuario']}, contraseña temporal {$acceso['password']}");
+                . "Entrégale estos datos al administrador: usuario {$acceso['usuario']}, contraseña temporal {$acceso['password']}. "
+                . "No se pudo enviar a: " . \Illuminate\Support\Str::limit((string) $acceso['error'], 200));
         }
 
         $licencia = Licencias::aprobar($licencia, $referencia, $valor);

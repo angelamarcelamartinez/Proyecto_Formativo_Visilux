@@ -363,6 +363,36 @@ class EmpresaController extends Controller
      * el administrador quedó inactivo por intentos fallidos y no hay nadie más
      * en su óptica que pueda activarlo.
      */
+    /**
+     * Botón «Reenviar credenciales»: genera una contraseña temporal nueva para el administrador
+     * y la envía al correo de la óptica y al del administrador.
+     */
+    public function reenviarCredenciales(string $nit, string $documento): RedirectResponse
+    {
+        $empresa = Empresa::findOrFail($nit);
+        $admin = Usuario::where('nit_empresa', $nit)
+            ->where('id_rol', config('visioptica.rol_admin'))
+            ->where('documento', $documento)
+            ->firstOrFail();
+
+        if ($empresa->estaPendiente()) {
+            return back()->withErrors(['general' => "{$empresa->nombre} todavía está pendiente: las credenciales se envían al aprobar el pago."]);
+        }
+
+        $licencia = $empresa->licencias()->orderByDesc('id_licencia')->first();
+        if (! $licencia) {
+            return back()->withErrors(['general' => "{$empresa->nombre} no tiene licencia: asígnale una antes de enviar credenciales."]);
+        }
+
+        $r = \App\Support\RegistroOptica::reenviarCredenciales($empresa, $admin, $licencia);
+
+        if ($r['enviado']) {
+            return back()->with('success', "Credenciales enviadas a {$r['correo']}. El administrador entra con {$r['usuario']} y debe cambiar la contraseña temporal.");
+        }
+
+        return back()->with('success', "No se pudo enviar a: {$r['error']}. (Si había dos correos, el otro sí lo recibió.) Entrégale estos datos al administrador: usuario {$r['usuario']}, contraseña temporal {$r['password']}");
+    }
+
     public function cambiarEstadoUsuario(string $nit, string $documento): RedirectResponse
     {
         $usuario = Usuario::where('nit_empresa', $nit)->where('documento', $documento)->firstOrFail();
