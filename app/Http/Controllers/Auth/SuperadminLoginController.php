@@ -36,7 +36,7 @@ class SuperadminLoginController extends Controller
 
         $clave = Str::lower($credenciales['email']) . '|' . $request->ip();
 
-        if (RateLimiter::tooManyAttempts($clave, 5)) {
+        if (RateLimiter::tooManyAttempts($clave, 4)) {
             $segundos = RateLimiter::availableIn($clave);
             throw ValidationException::withMessages([
                 'email' => "Demasiados intentos. Vuelve a intentarlo en {$segundos} segundos.",

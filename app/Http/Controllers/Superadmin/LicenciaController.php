@@ -8,12 +8,42 @@ use App\Support\Licencias;
 use App\Support\RegistroOptica;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\View\View;
 
 /**
- * Aprobar o rechazar las solicitudes de plan. Los botones están en el Panel general.
+ * Licencias: historial (con descarga en Excel y PDF) y ópticas que requieren atención.
+ * Aprobar o rechazar las solicitudes de plan se hace desde el Panel general.
  */
 class LicenciaController extends Controller
 {
+    public function index(Request $request): View
+    {
+        Licencias::marcarVencidas();
+
+        // Ópticas que requieren atención: por vencer, vencidas o sin plan
+        // (se filtra en PHP: estado_licencia es una columna calculada de la vista y compararla en SQL
+        // puede chocar con la collation de la conexión)
+        $alertas = DB::table('v_estado_licencias')
+            ->get()
+            ->whereIn('estado_licencia', ['por_vencer', 'vencida', 'sin_licencia'])
+            ->sortBy(fn ($o) => $o->dias_restantes ?? -9999)
+            ->values();
+
+        // Historial de licencias de todas las ópticas (los pagos por aprobar están en el Panel general)
+        $estadoLic = in_array($request->get('lic'), ['activa', 'vencida', 'cancelada'], true) ? $request->get('lic') : 'todas';
+
+        $historial = Licencia::with(['empresa', 'plan'])
+            ->where('estado', '<>', 'pendiente')
+            ->when($estadoLic !== 'todas', fn ($q) => $q->where('estado', $estadoLic))
+            ->orderByDesc('fecha_solicitud')
+            ->paginate(10, ['*'], 'hist')
+            ->withQueryString()
+            ->fragment('historial');
+
+        return view('superadmin.licencias.index', compact('alertas', 'historial', 'estadoLic'));
+    }
+
     public function aprobar(Request $request, int $id): RedirectResponse
     {
         $data = $request->validate([

@@ -24,6 +24,9 @@ class LoginController extends Controller
 
     use AuthenticatesUsers;
 
+    /** Intentos fallidos permitidos antes de bloquear el ingreso (1 minuto). */
+    protected $maxAttempts = 4;
+
     /**
      * A dónde redirigir según el rol del usuario autenticado:
      * el superadmin va a /superadmin, los administradores de cada
@@ -73,12 +76,52 @@ class LoginController extends Controller
      */
     protected function authenticated(Request $request, $user)
     {
-        // Un administrador de óptica solo entra si su óptica está activa y con licencia vigente.
-        if ($user->esAdministrador() && ! Licencias::puedeIngresar($user->empresa)) {
-            return self::cerrarPorLicencia($request, $user);
+        // Cuenta desactivada: el superadmin desactiva a los administradores y cada administrador
+        // desactiva a los demás usuarios de su óptica.
+        if (in_array((int) $user->id_estado, [2, 4], true)) {
+            return self::cerrarSesionCon($request, $user->esAdministrador()
+                ? 'Tu cuenta de administrador está inactiva. Comunícate con VisiOptica para activarla.'
+                : 'Tu cuenta está inactiva. Pide al administrador de tu óptica que la active.');
+        }
+
+        $empresa = $user->empresa;
+
+        if ($user->esAdministrador()) {
+            // El administrador entra aunque la licencia haya vencido: verá la pantalla para renovarla.
+            // Solo se le cierra la puerta si la óptica no existe, está suspendida o espera su primer pago.
+            if (! Licencias::adminPuedeEntrar($empresa)) {
+                return self::cerrarPorLicencia($request, $user);
+            }
+        } elseif ($empresa && ! Licencias::puedeIngresar($empresa)) {
+            // Clientes, recepcionistas, asesores...: no entran mientras la licencia esté inactiva.
+            return self::cerrarPorLicenciaInactiva($request, $user);
         }
 
         app(CarritoController::class)->fusionarCarritoInvitado($user->documento);
+    }
+
+    /**
+     * Mensaje para los usuarios que no son administradores cuando la licencia de su óptica no está activa.
+     */
+    public static function cerrarPorLicenciaInactiva(Request $request, $user)
+    {
+        $nombre = $user->empresa?->nombre ?? 'tu óptica';
+
+        return self::cerrarSesionCon($request, "La licencia de {$nombre} está inactiva, por eso no puedes ingresar por ahora. "
+            . 'Comunícate con el administrador de la óptica.');
+    }
+
+    /** Cierra la sesión y vuelve al login con un mensaje. */
+    public static function cerrarSesionCon(Request $request, string $mensaje, ?string $renovarNit = null)
+    {
+        Auth::logout();
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
+
+        return redirect()->route('login')->with('licencia_bloqueada', [
+            'mensaje' => $mensaje,
+            'renovar_nit' => $renovarNit,
+        ]);
     }
 
     /**
@@ -102,15 +145,8 @@ class LoginController extends Controller
                 . '. Renueva tu plan para volver a entrar; tus datos siguen guardados.';
         }
 
-        Auth::logout();
-        $request->session()->invalidate();
-        $request->session()->regenerateToken();
-
-        return redirect()->route('login')->with('licencia_bloqueada', [
-            'mensaje' => $mensaje,
-            // Solo se ofrece renovar cuando lo que falta es pagar.
-            'renovar_nit' => ($empresa && $empresa->estado === 'activa') ? $empresa->nit : null,
-        ]);
+        // Solo se ofrece renovar cuando lo que falta es pagar.
+        return self::cerrarSesionCon($request, $mensaje, ($empresa && $empresa->estado === 'activa') ? $empresa->nit : null);
     }
 
     /**

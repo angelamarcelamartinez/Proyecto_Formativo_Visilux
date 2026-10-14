@@ -121,11 +121,13 @@ class RegistroOptica
 
         // El correo va por fuera de la transacción: si falla, la óptica igual queda activa
         // y el superadmin ve la contraseña en pantalla para entregarla de otra forma.
-        // Va al correo de la óptica; el usuario para entrar es el correo del administrador.
-        $destino = $empresa->email ?: $admin->email;
+        // Va al correo de la óptica Y al del administrador (el usuario para entrar es el correo del administrador).
+        $destinos = collect([$empresa->email, $admin->email])->filter()->map(fn ($c) => trim($c))
+            ->unique(fn ($c) => mb_strtolower($c))->values()->all();
+        $destino = implode(', ', $destinos);
         $enviado = true;
         try {
-            Mail::to($destino)->send(new CredencialesAccesoMail($empresa->fresh(), $admin, $password, $licencia->fresh('plan')));
+            Mail::to($destinos)->send(new CredencialesAccesoMail($empresa->fresh(), $admin, $password, $licencia->fresh('plan')));
         } catch (\Throwable $e) {
             report($e);
             $enviado = false;

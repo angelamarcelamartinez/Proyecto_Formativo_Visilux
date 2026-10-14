@@ -35,20 +35,44 @@
     </div>
 </section>
 
+
+<style>
+    /* Sección infantil: colores vivos y figuras geométricas */
+    .ninos-seccion { position: relative; overflow: hidden; background: linear-gradient(180deg, #fff8e1 0%, #e8f7ff 100%); }
+    .ninos-figura { position: absolute; opacity: .28; z-index: 0; pointer-events: none; }
+    .ninos-f1 { top: 28px; left: 6%; font-size: 3rem; color: #ffb300; transform: rotate(-12deg); }
+    .ninos-f2 { top: 120px; right: 8%; font-size: 3.4rem; color: #29b6f6; }
+    .ninos-f3 { bottom: 50px; left: 10%; font-size: 3rem; color: #ef5350; transform: rotate(10deg); }
+    .ninos-f4 { bottom: 70px; right: 6%; font-size: 2.6rem; color: #66bb6a; transform: rotate(14deg); }
+    .ninos-duracion { background: #ffb300; color: #fff; font-weight: 600; padding: .5rem .9rem; }
+    .ninos-card { border-radius: 1.5rem; border-top: 8px solid var(--c) !important; }
+    .ninos-rojo { --c: #ef5350; }
+    .ninos-azul { --c: #29b6f6; }
+    .ninos-amarillo { --c: #ffb300; }
+    .ninos-icono { width: 64px; height: 64px; border-radius: 50% 50% 50% 14px; background: var(--c); color: #fff; font-size: 1.8rem;
+        display: flex; align-items: center; justify-content: center; }
+    .ninos-card h3 { color: var(--c); }
+</style>
+
 <!-- ======================================================
      TERAPIA VISUAL PARA NIÑOS
 ====================================================== -->
-<section class="section-services py-5" style="background: var(--bg-mint);">
-    <div class="container py-4">
+<section class="section-services py-5 ninos-seccion">
+    <span class="ninos-figura ninos-f1"><i class="bi bi-star-fill"></i></span>
+    <span class="ninos-figura ninos-f2"><i class="bi bi-circle-fill"></i></span>
+    <span class="ninos-figura ninos-f3"><i class="bi bi-triangle-fill"></i></span>
+    <span class="ninos-figura ninos-f4"><i class="bi bi-square-fill"></i></span>
+    <div class="container py-4 position-relative">
         <div class="text-center mb-5">
             <h2 class="section-title fw-bold">Para Niños</h2>
-            <p class="text-muted">Un enfoque lúdico que ayuda a detectar y corregir a tiempo</p>
+            <p class="text-muted mb-2">Un enfoque lúdico que ayuda a detectar y corregir a tiempo</p>
+            <span class="badge rounded-pill ninos-duracion"><i class="bi bi-clock me-1"></i>Cada sesión de terapia dura 1 hora</span>
         </div>
 
         <div class="row g-4">
             <div class="col-lg-4">
-                <div class="card feature-card border shadow-sm h-100 p-4">
-                    <div class="feature-icon feature-icon-teal mb-3">
+                <div class="card feature-card ninos-card ninos-rojo border-0 shadow-sm h-100 p-4">
+                    <div class="feature-icon ninos-icono mb-3">
                         <i class="bi bi-eye"></i>
                     </div>
                     <h3 class="h5 fw-bold">Ambliopía (Ojo Perezoso)</h3>
@@ -60,8 +84,8 @@
             </div>
 
             <div class="col-lg-4">
-                <div class="card feature-card border shadow-sm h-100 p-4">
-                    <div class="feature-icon feature-icon-blue mb-3">
+                <div class="card feature-card ninos-card ninos-azul border-0 shadow-sm h-100 p-4">
+                    <div class="feature-icon ninos-icono mb-3">
                         <i class="bi bi-puzzle"></i>
                     </div>
                     <h3 class="h5 fw-bold">Coordinación Ojo-Mano</h3>
@@ -73,8 +97,8 @@
             </div>
 
             <div class="col-lg-4">
-                <div class="card feature-card border shadow-sm h-100 p-4">
-                    <div class="feature-icon feature-icon-teal mb-3">
+                <div class="card feature-card ninos-card ninos-amarillo border-0 shadow-sm h-100 p-4">
+                    <div class="feature-icon ninos-icono mb-3">
                         <i class="bi bi-emoji-smile"></i>
                     </div>
                     <h3 class="h5 fw-bold">Binocularidad</h3>
@@ -99,7 +123,7 @@
         </div>
 
         <div class="row g-4">
-            <div class="col-lg-4">
+            <div class="col-lg-6">
                 <div class="card feature-card border shadow-sm h-100 p-4">
                     <div class="feature-icon feature-icon-blue mb-3">
                         <i class="bi bi-arrow-repeat"></i>
@@ -112,20 +136,7 @@
                 </div>
             </div>
 
-            <div class="col-lg-4">
-                <div class="card feature-card border shadow-sm h-100 p-4">
-                    <div class="feature-icon feature-icon-teal mb-3">
-                        <i class="bi bi-brightness-high"></i>
-                    </div>
-                    <h3 class="h5 fw-bold">Baja Visión</h3>
-                    <p class="text-muted mb-0">
-                        Programas de rehabilitación visual para pacientes con pérdida
-                        parcial de visión, enfocados en recuperar autonomía diaria.
-                    </p>
-                </div>
-            </div>
-
-            <div class="col-lg-4">
+            <div class="col-lg-6">
                 <div class="card feature-card border shadow-sm h-100 p-4">
                     <div class="feature-icon feature-icon-blue mb-3">
                         <i class="bi bi-laptop"></i>

@@ -67,7 +67,8 @@ class Usuario extends Authenticatable
      */
     public function getDebeCambiarPasswordAttribute(): bool
     {
-        return (int) $this->id_rol === (int) config('visioptica.rol_admin')
+        // Administradores y empleados (vendedor, recepcionista, auditor...). Los clientes no usan contraseña temporal.
+        return in_array((int) $this->id_rol, [(int) config('visioptica.rol_admin'), 3, 4, 5], true)
             && (int) $this->id_estado === 3;
     }
 

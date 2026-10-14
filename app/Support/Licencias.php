@@ -77,6 +77,13 @@ class Licencias
                 $empresa->update(['prueba_usada' => 1]);
             }
 
+            // La licencia vencida que tenían pasa a «inactiva»: queda en el historial, pero ya no cuenta.
+            // (Si todavía tenía días, sigue activa hasta que termine; luego marcarVencidas() la inactiva.)
+            Licencia::where('nit_empresa', $empresa->nit)
+                ->where('estado', 'vencida')
+                ->where('id_licencia', '<>', $licencia->id_licencia)
+                ->update(['estado' => 'inactiva']);
+
             Actividad::registrar(
                 $empresa->nit, 'licencia',
                 "Licencia {$plan->nombre} activada hasta " . $licencia->fecha_fin->format('d/m/Y'),
@@ -85,6 +92,29 @@ class Licencias
 
             return $licencia->fresh(['plan']);
         });
+    }
+
+    /**
+     * Renovación pagada con tarjeta (pago simulado): queda «pendiente» con su propio id
+     * hasta que el superadmin la acepte. No se vuelve a verificar NIT ni Cámara de Comercio.
+     *
+     * @param array{referencia: string, marca: string, ultimos4: string, titular: string} $pago
+     */
+    public static function renovar(Empresa $empresa, Plan $plan, array $pago): Licencia
+    {
+        $licencia = Licencia::create([
+            'nit_empresa' => $empresa->nit,
+            'id_plan' => $plan->id_plan,
+            'estado' => 'pendiente',
+            'valor' => $plan->precio,
+            'referencia_pago' => $pago['referencia'],
+            'observaciones' => "Renovación con pago simulado: {$pago['marca']} terminada en {$pago['ultimos4']} a nombre de {$pago['titular']}",
+            'fecha_solicitud' => now(),
+        ]);
+
+        Actividad::registrar($empresa->nit, 'licencia', "Pagó la renovación del plan {$plan->nombre}", 'licencia', $licencia->id_licencia);
+
+        return $licencia;
     }
 
     /**
@@ -139,9 +169,73 @@ class Licencias
      */
     public static function marcarVencidas(): int
     {
-        return Licencia::where('estado', 'activa')
+        $n = Licencia::where('estado', 'activa')
             ->whereDate('fecha_fin', '<', today())
             ->update(['estado' => 'vencida']);
+
+        // Una licencia vencida de una óptica que ya tiene otra vigente pasa a «inactiva».
+        $conVigente = Licencia::where('estado', 'activa')
+            ->whereDate('fecha_fin', '>=', today())
+            ->pluck('nit_empresa')->unique()->all();
+
+        if ($conVigente) {
+            Licencia::where('estado', 'vencida')->whereIn('nit_empresa', $conVigente)->update(['estado' => 'inactiva']);
+        }
+
+        return $n;
+    }
+
+    /**
+     * Lo mismo que marcarVencidas(), pero como mucho una vez cada 5 minutos: se llama desde un
+     * middleware en cada petición para que los estados se actualicen solos con la hora del sistema,
+     * sin depender del cron del hosting.
+     */
+    public static function marcarVencidasAutomatico(): void
+    {
+        try {
+            if (\Illuminate\Support\Facades\Cache::add('licencias:marcar_vencidas', 1, 300)) {
+                static::marcarVencidas();
+            }
+        } catch (\Throwable $e) {
+            report($e);
+        }
+    }
+
+    /**
+     * Correos a los que se avisa de algo de la óptica: el de la empresa y el de sus administradores.
+     *
+     * @return array<int, string>
+     */
+    public static function correosDe(Empresa $empresa): array
+    {
+        return collect([$empresa->email])
+            ->merge($empresa->usuarios()->where('id_rol', config('visioptica.rol_admin'))->pluck('email'))
+            ->filter()->map(fn ($c) => trim($c))->unique(fn ($c) => mb_strtolower($c))->values()->all();
+    }
+
+    /**
+     * El administrador puede entrar al panel aunque la licencia haya vencido (verá la pantalla de
+     * renovación). No puede si la óptica no existe, está suspendida o espera su primer pago.
+     */
+    public static function adminPuedeEntrar(?Empresa $empresa): bool
+    {
+        return $empresa && ! $empresa->estaSuspendida() && ! $empresa->estaPendiente();
+    }
+
+    /**
+     * Confirma por correo (a la óptica y al administrador) que se recibió el pago de la renovación.
+     */
+    public static function notificarPagoRecibido(Licencia $licencia): bool
+    {
+        try {
+            Mail::to(static::correosDe($licencia->empresa))->send(new \App\Mail\RenovacionRecibidaMail($licencia->empresa, $licencia->loadMissing('plan')));
+
+            return true;
+        } catch (\Throwable $e) {
+            report($e);
+
+            return false;
+        }
     }
 
     /**
@@ -152,9 +246,7 @@ class Licencias
     {
         $empresa = $licencia->empresa;
 
-        $correos = collect([$empresa->email])
-            ->merge($empresa->usuarios()->where('id_rol', config('visioptica.rol_admin'))->pluck('email'))
-            ->filter()->unique()->values()->all();
+        $correos = static::correosDe($empresa);
 
         try {
             Mail::to($correos)->send(new \App\Mail\RenovacionAprobadaMail($empresa, $licencia->loadMissing('plan')));

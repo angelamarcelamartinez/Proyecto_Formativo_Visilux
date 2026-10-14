@@ -72,7 +72,7 @@
 
     <div class="grid xl:grid-cols-3 gap-6">
 
-        <div class="xl:col-span-2 space-y-6">
+        <div class="xl:col-span-2 min-w-0 space-y-6">
 
             {{-- Licencia actual + asignar plan --}}
             <div class="bg-white rounded-2xl border border-olive-100 shadow-card p-5 sm:p-6">
@@ -174,7 +174,7 @@
         </div>
 
         {{-- Columna derecha --}}
-        <div class="space-y-6">
+        <div class="min-w-0 space-y-6">
             <div class="bg-white rounded-2xl border border-olive-100 shadow-card p-5 sm:p-6">
                 <h3 class="font-serif text-lg mb-4">Datos de la óptica</h3>
                 <dl class="space-y-3 text-sm">
@@ -225,7 +225,10 @@
                 @endforelse
 
                 @if ($admins->isNotEmpty())
-                    <p class="text-[11px] font-semibold uppercase tracking-wider text-muted mt-5 mb-2">Administradores</p>
+                    <div class="flex items-center justify-between mt-5 mb-2">
+                        <p class="text-[11px] font-semibold uppercase tracking-wider text-muted">Administradores</p>
+                        <a href="{{ route('superadmin.empresas.admins', $empresa->nit) }}" class="text-xs font-medium text-olive-700 hover:underline">Ver y editar</a>
+                    </div>
                     @foreach ($admins as $admin)
                         <div class="text-sm py-1.5">
                             <p class="font-medium">{{ trim($admin->nombres . ' ' . $admin->apellido) }}</p>

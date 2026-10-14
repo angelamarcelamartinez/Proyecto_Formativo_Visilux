@@ -933,9 +933,10 @@ class CrudController extends Controller
             $esCancelada = $cancelado && (int) ($data['id_estado'] ?? 0) === (int) $cancelado;
 
             if (! $esCancelada && \App\Support\AgendaCitas::citaOcupada(
-                substr($data['fecha_cita'], 0, 10), $data['hora_cita'], (int) $data['id_optometra'], $id !== null ? (int) $id : null
+                substr($data['fecha_cita'], 0, 10), $data['hora_cita'], (int) $data['id_optometra'], $id !== null ? (int) $id : null,
+                ! empty($data['id_tipo_cita']) ? (int) $data['id_tipo_cita'] : null
             )) {
-                return ['hora_cita' => 'Ese optómetra ya tiene una cita ese día a esa hora. Escoge otra hora u otro optómetra.'];
+                return ['hora_cita' => 'Ese optómetra ya tiene una cita que se cruza con esa hora (las terapias duran 1 hora, las demás citas 30 minutos). Escoge otra hora u otro optómetra.'];
             }
         }
 

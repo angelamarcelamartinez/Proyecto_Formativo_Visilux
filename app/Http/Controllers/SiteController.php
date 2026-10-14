@@ -149,13 +149,17 @@ class SiteController extends Controller
      */
     public function horariosDisponibles(Request $request): JsonResponse
     {
-        $request->validate(['fecha' => ['required', 'date_format:Y-m-d']]);
+        $request->validate([
+            'fecha' => ['required', 'date_format:Y-m-d'],
+            'id_tipo_cita' => ['nullable', 'integer'],
+        ]);
 
         $fecha = Carbon::createFromFormat('Y-m-d', $request->fecha)->startOfDay();
 
         return response()->json([
             'dia' => AgendaCitas::nombreDia($fecha),
-            'turnos' => AgendaCitas::turnosLibres($fecha),
+            'turnos' => AgendaCitas::turnosLibres($fecha, $request->filled('id_tipo_cita') ? (int) $request->id_tipo_cita : null),
+            'minutos' => AgendaCitas::minutosDelTipo($request->filled('id_tipo_cita') ? (int) $request->id_tipo_cita : null),
         ]);
     }
 
@@ -229,7 +233,7 @@ class SiteController extends Controller
                     ->lockForUpdate()
                     ->get();
 
-                if (! AgendaCitas::turnoDisponible($fecha, $data['hora'], (int) $data['id_optometra'])) {
+                if (! AgendaCitas::turnoDisponible($fecha, $data['hora'], (int) $data['id_optometra'], (int) $data['id_tipo_cita'])) {
                     return false;
                 }
 
@@ -301,7 +305,7 @@ class SiteController extends Controller
         $guardada = DB::transaction(function () use ($registro, $fecha, $data) {
             DB::table('usuarios_no_registrados')->lockForUpdate()->whereDate('fecha_registro', now()->toDateString())->get(['id_usuario_nr']);
 
-            if (! AgendaCitas::turnoDisponible($fecha, $data['hora'], (int) $data['id_optometra'])) {
+            if (! AgendaCitas::turnoDisponible($fecha, $data['hora'], (int) $data['id_optometra'], (int) $data['id_tipo_cita'])) {
                 return false;
             }
 

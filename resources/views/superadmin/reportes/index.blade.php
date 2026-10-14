@@ -22,72 +22,14 @@
 
     <div class="mb-6">
         <h1 class="font-serif text-2xl">Reportes</h1>
-        <p class="text-sm text-muted">Ingresos, ópticas, actividad y las ópticas que necesitan un aviso. Los reportes de ingresos y de ópticas se descargan en Excel y PDF.</p>
+        <p class="text-sm text-muted">Ingresos y ópticas. Las ópticas que requieren atención y el historial de licencias están en la pestaña Licencias. Los reportes de ingresos y de ópticas se descargan en Excel y PDF.</p>
     </div>
 
     {{-- Atajos --}}
     <div class="flex items-center gap-1 bg-creamdark/70 rounded-full p-1 overflow-x-auto mb-8 w-fit max-w-full">
-        @foreach (['atencion' => 'Requieren atención', 'ingresos' => 'Ingresos por licencias', 'reporte-opticas' => 'Ópticas', 'actividad' => 'Registro de actividad'] as $id => $label)
+        @foreach (['ingresos' => 'Ingresos por licencias', 'reporte-opticas' => 'Ópticas'] as $id => $label)
             <a href="#{{ $id }}" class="shrink-0 px-3.5 py-1.5 rounded-full text-xs font-medium text-ink/70 hover:text-ink hover:bg-white transition whitespace-nowrap">{{ $label }}</a>
         @endforeach
-    </div>
-
-    {{-- ============ Requieren atención ============ --}}
-    <div id="atencion" class="bg-white rounded-2xl border border-olive-100 shadow-card overflow-hidden mb-8 scroll-mt-24">
-        <div class="px-5 sm:px-6 pt-5 pb-4 border-b border-olive-100 flex items-center gap-3 flex-wrap">
-            <div class="w-9 h-9 rounded-xl bg-amber-50 text-amber-700 flex items-center justify-center">
-                @include('partials.icon', ['name' => 'clock', 'class' => 'w-4.5 h-4.5'])
-            </div>
-            <div class="flex-1 min-w-[12rem]">
-                <h3 class="font-serif text-lg leading-tight flex items-center gap-2">
-                    Requieren atención
-                    <span class="text-[11px] font-sans font-semibold bg-creamdark text-olive-700 rounded-full px-2 py-0.5 tabular-nums">{{ $alertas->count() }}</span>
-                </h3>
-                <p class="text-xs text-muted">Por vencer, vencidas o sin plan</p>
-            </div>
-            <form method="POST" action="{{ route('superadmin.avisos') }}">
-                @csrf
-                <button type="submit" title="Envía el correo de vencimiento a las ópticas a las que les toca hoy"
-                        class="inline-flex items-center gap-1.5 text-sm font-semibold text-cream bg-olive-600 hover:bg-olive-700 rounded-xl px-4 py-2.5 shadow-card transition">
-                    @include('partials.icon', ['name' => 'mail', 'class' => 'w-4 h-4'])
-                    Enviar avisos
-                </button>
-            </form>
-        </div>
-
-        @if ($alertas->isEmpty())
-            <div class="px-6 py-10 text-center text-sm text-muted">Todas las ópticas están al día.</div>
-        @else
-            <div class="overflow-x-auto">
-                <table class="w-full text-sm">
-                    <thead>
-                        <tr class="bg-cream text-left text-[11px] uppercase tracking-wider text-muted">
-                            <th class="py-3 pl-6 pr-4 font-semibold">Óptica</th>
-                            <th class="py-3 pr-4 font-semibold">Correo</th>
-                            <th class="py-3 pr-4 font-semibold">Plan</th>
-                            <th class="py-3 pr-4 font-semibold">Vence</th>
-                            <th class="py-3 pr-4 font-semibold">Días</th>
-                            <th class="py-3 pr-6 font-semibold">Estado</th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-olive-100">
-                        @foreach ($alertas as $o)
-                            <tr class="hover:bg-cream/70 transition">
-                                <td class="py-3 pl-6 pr-4 whitespace-nowrap">
-                                    <a href="{{ route('superadmin.empresas.show', $o->nit) }}" class="font-medium hover:text-olive-700">{{ $o->empresa }}</a>
-                                    <p class="text-[11px] text-muted">NIT {{ $o->nit }}</p>
-                                </td>
-                                <td class="py-3 pr-4 text-ink/70 whitespace-nowrap">{{ $o->email }}</td>
-                                <td class="py-3 pr-4 whitespace-nowrap">{{ $o->plan ?? 'Sin plan' }}</td>
-                                <td class="py-3 pr-4 whitespace-nowrap text-ink/70 tabular-nums">{{ $o->fecha_fin ? \Illuminate\Support\Carbon::parse($o->fecha_fin)->format('d/m/Y') : '—' }}</td>
-                                <td class="py-3 pr-4">@include('partials.estado-licencia', ['dias' => $o->dias_restantes !== null ? (int) $o->dias_restantes : null, 'solo' => 'dias'])</td>
-                                <td class="py-3 pr-6">@include('partials.estado-licencia', ['estado' => $o->estado_licencia, 'solo' => 'estado'])</td>
-                            </tr>
-                        @endforeach
-                    </tbody>
-                </table>
-            </div>
-        @endif
     </div>
 
     {{-- ============ Ingresos por licencias ============ --}}
@@ -243,82 +185,6 @@
                         @endforeach
                     </tbody>
                 </table>
-            </div>
-        @endif
-    </div>
-
-    {{-- ============ Registro de actividad ============ --}}
-    <div id="actividad" class="bg-white rounded-2xl border border-olive-100 shadow-card overflow-hidden scroll-mt-24">
-        <div class="px-5 sm:px-6 pt-5 pb-4 border-b border-olive-100 flex items-center gap-3 flex-wrap">
-            <div class="w-9 h-9 rounded-xl bg-olive-100 text-olive-700 flex items-center justify-center">
-                @include('partials.icon', ['name' => 'file-text', 'class' => 'w-4.5 h-4.5'])
-            </div>
-            <div class="flex-1 min-w-[12rem]">
-                <h3 class="font-serif text-lg leading-tight">Registro de actividad</h3>
-                <p class="text-xs text-muted">Lo que ha pasado en todas las ópticas</p>
-            </div>
-            <form method="GET" action="{{ route('superadmin.reportes.index') }}#actividad" class="flex flex-wrap items-center gap-2">
-                @foreach ($conservar(['nit', 'accion']) as $k => $v)
-                    <input type="hidden" name="{{ $k }}" value="{{ $v }}">
-                @endforeach
-                <select name="nit" class="{{ $campo }}" onchange="this.form.submit()">
-                    <option value="">Todas las ópticas</option>
-                    @foreach ($listaOpticas as $e)
-                        <option value="{{ $e->nit }}" @selected($nitActividad === $e->nit)>{{ $e->nombre }}</option>
-                    @endforeach
-                </select>
-                <select name="accion" class="{{ $campo }}" onchange="this.form.submit()">
-                    <option value="">Todas las acciones</option>
-                    @foreach ($acciones as $a)
-                        <option value="{{ $a }}" @selected($accion === $a)>{{ ucfirst($a) }}</option>
-                    @endforeach
-                </select>
-                @if ($nitActividad !== '' || $accion !== '')
-                    <a href="{{ route('superadmin.reportes.index', $conservar(['nit', 'accion'])->all()) }}#actividad" class="text-xs font-semibold text-olive-600 hover:text-olive-800">Quitar filtros</a>
-                @endif
-            </form>
-        </div>
-
-        <div class="overflow-x-auto">
-            <table class="w-full text-sm">
-                <thead>
-                    <tr class="bg-cream text-left text-[11px] uppercase tracking-wider text-muted">
-                        <th class="py-3 pl-6 pr-4 font-semibold">Fecha</th>
-                        <th class="py-3 pr-4 font-semibold">Óptica</th>
-                        <th class="py-3 pr-4 font-semibold">Acción</th>
-                        <th class="py-3 pr-4 font-semibold">Detalle</th>
-                        <th class="py-3 pr-6 font-semibold">Usuario</th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-olive-100">
-                    @forelse ($actividad as $a)
-                        <tr class="hover:bg-cream/70 transition">
-                            <td class="py-3 pl-6 pr-4 whitespace-nowrap text-ink/70 tabular-nums">{{ $a->fecha?->format('d/m/Y H:i') }}</td>
-                            <td class="py-3 pr-4 whitespace-nowrap">{{ $a->empresa->nombre ?? 'VisiOptica' }}</td>
-                            <td class="py-3 pr-4 whitespace-nowrap">
-                                <span class="text-[11px] font-semibold uppercase tracking-wide text-olive-700 bg-olive-50 rounded px-2 py-0.5">{{ $a->accion }}</span>
-                            </td>
-                            <td class="py-3 pr-4 text-ink/80">{{ $a->descripcion }}</td>
-                            <td class="py-3 pr-6 whitespace-nowrap text-ink/70">{{ $a->usuario->nombres ?? 'Sistema' }}</td>
-                        </tr>
-                    @empty
-                        <tr><td colspan="5" class="px-6 py-10 text-center text-muted">Sin actividad registrada.</td></tr>
-                    @endforelse
-                </tbody>
-            </table>
-        </div>
-
-        @if ($actividad->hasPages())
-            <div class="px-6 py-4 border-t border-olive-100 flex items-center justify-between text-sm">
-                <span class="text-muted">Página {{ $actividad->currentPage() }} de {{ $actividad->lastPage() }}</span>
-                <div class="flex gap-2">
-                    @if ($actividad->previousPageUrl())
-                        <a href="{{ $actividad->previousPageUrl() }}" class="px-3 py-1.5 rounded-lg border border-olive-100 hover:bg-olive-50">Anterior</a>
-                    @endif
-                    @if ($actividad->nextPageUrl())
-                        <a href="{{ $actividad->nextPageUrl() }}" class="px-3 py-1.5 rounded-lg border border-olive-100 hover:bg-olive-50">Siguiente</a>
-                    @endif
-                </div>
             </div>
         @endif
     </div>

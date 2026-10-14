@@ -2,9 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Actividad;
 use App\Models\Empresa;
-use App\Models\Licencia;
 use App\Models\Plan;
 use App\Models\Usuario;
 use App\Support\Licencias;
@@ -76,17 +74,8 @@ class RenovarController extends Controller
             $datos['tarjeta_vencimiento'], $datos['tarjeta_cvv'], $plan->precio
         );
 
-        $licencia = Licencia::create([
-            'nit_empresa' => $empresa->nit,
-            'id_plan' => $plan->id_plan,
-            'estado' => 'pendiente',
-            'valor' => $plan->precio,
-            'referencia_pago' => $pago['referencia'],
-            'observaciones' => "Renovación con pago simulado: {$pago['marca']} terminada en {$pago['ultimos4']} a nombre de {$pago['titular']}",
-            'fecha_solicitud' => now(),
-        ]);
-
-        Actividad::registrar($empresa->nit, 'licencia', "Pagó la renovación del plan {$plan->nombre}", 'licencia', $licencia->id_licencia);
+        $licencia = Licencias::renovar($empresa, $plan, $pago);
+        Licencias::notificarPagoRecibido($licencia);
 
         $inicio = Licencias::fechaInicioPara($empresa);
 

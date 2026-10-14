@@ -54,6 +54,13 @@
                 @endif
             </a>
 
+            <a href="{{ route('admin.equipo.index') }}"
+               class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition
+                      {{ request()->routeIs('admin.equipo.*') ? 'bg-olive-600 text-cream shadow-card' : 'text-ink/80 hover:bg-olive-100' }}">
+                @include('partials.icon', ['name' => 'users', 'class' => 'w-5 h-5 shrink-0'])
+                Equipo
+            </a>
+
             <p class="px-3 pt-5 pb-1 text-[11px] font-semibold uppercase tracking-wider text-muted">Tablas del sistema</p>
 
             @foreach (config('admin_tables.groups') as $groupKey => $group)

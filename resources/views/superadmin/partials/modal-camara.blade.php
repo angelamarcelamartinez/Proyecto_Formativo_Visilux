@@ -45,7 +45,7 @@
                     </a>
                 @else
                     <div class="rounded-xl bg-rose-50 text-rose-700 text-sm px-4 py-3">
-                        Esta óptica no tiene certificado cargado. Edita la óptica y adjunta el PDF.
+                        Esta óptica no tiene certificado cargado. Usa «Editar datos de la óptica» y adjunta el PDF.
                     </div>
                 @endif
 
@@ -66,13 +66,26 @@
                             <input type="checkbox" name="confirmo" value="1" required class="mt-1 rounded border-olive-300">
                             <span>Verifiqué con la Cámara de Comercio que el NIT <strong>{{ $empresa->nit }}</strong> corresponde a una empresa que existe.</span>
                         </label>
-                        <div class="flex items-center gap-2">
+                        <div class="flex flex-wrap items-center gap-2">
                             <button type="button" @click="abierto = false" class="text-sm text-muted hover:text-ink px-3 py-2">Cancelar</button>
+                            {{-- Si el NIT está mal digitado, se corrige antes de verificar y aprobar --}}
+                            <a href="{{ route('superadmin.empresas.edit', $empresa->nit) }}"
+                               class="inline-flex items-center gap-1.5 text-sm font-medium border border-olive-200 text-olive-700 hover:bg-olive-50 transition px-4 py-2 rounded-lg">
+                                @include('partials.icon', ['name' => 'pencil', 'class' => 'w-4 h-4'])
+                                Editar datos de la óptica
+                            </a>
                             <button type="submit" class="bg-olive-600 hover:bg-olive-700 transition text-cream text-sm font-medium px-4 py-2 rounded-lg">Confirmar y aprobar</button>
                         </div>
                     </form>
                 @else
-                    <div class="text-right">
+                    <div class="flex flex-wrap items-center justify-end gap-2">
+                        @if ($licencia)
+                            <a href="{{ route('superadmin.empresas.edit', $empresa->nit) }}"
+                               class="inline-flex items-center gap-1.5 text-sm font-medium border border-olive-200 text-olive-700 hover:bg-olive-50 transition px-4 py-2 rounded-lg">
+                                @include('partials.icon', ['name' => 'pencil', 'class' => 'w-4 h-4'])
+                                Editar datos de la óptica
+                            </a>
+                        @endif
                         <button type="button" @click="abierto = false" class="text-sm font-medium bg-olive-600 hover:bg-olive-700 transition text-cream px-4 py-2 rounded-lg">Cerrar</button>
                     </div>
                 @endif

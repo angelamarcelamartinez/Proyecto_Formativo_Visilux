@@ -3,8 +3,6 @@
 namespace App\Http\Controllers\Superadmin;
 
 use App\Http\Controllers\Controller;
-use App\Models\Actividad;
-use App\Models\Empresa;
 use App\Models\Licencia;
 use App\Support\Licencias;
 use App\Support\SimplePdf;
@@ -18,9 +16,8 @@ use Illuminate\View\View;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 /**
- * Reportes del superadmin: ingresos por licencias, ópticas, actividad y las
- * ópticas que requieren atención (desde aquí se mandan los avisos).
- * Los reportes de ingresos y de ópticas se pueden bajar en Excel y en PDF.
+ * Reportes del superadmin: ingresos por licencias y ópticas.
+ * Los reportes de ingresos, de ópticas y el historial de licencias se pueden bajar en Excel y en PDF.
  */
 class ReporteController extends Controller
 {
@@ -44,11 +41,6 @@ class ReporteController extends Controller
         $estado = $this->estadoValido($request->get('estado'));
         $opticas = $estado === 'todas' ? $todas : $todas->where('estado_licencia', $estado)->values();
 
-        $alertas = $todas
-            ->whereIn('estado_licencia', ['por_vencer', 'vencida', 'sin_licencia'])
-            ->sortBy(fn ($o) => $o->dias_restantes ?? -9999)
-            ->values();
-
         // ---- Ingresos por licencias
         [$desde, $hasta] = $this->rangoMeses($request);
         $pagos = $this->pagosDelRango($desde, $hasta);
@@ -69,20 +61,7 @@ class ReporteController extends Controller
 
         $totalIngresos = (float) $pagos->sum('valor');
 
-        // ---- Actividad (todas las ópticas), con filtros
-        $nitActividad = (string) $request->get('nit', '');
-        $accion = (string) $request->get('accion', '');
-
-        $actividad = Actividad::with(['empresa', 'usuario'])
-            ->when($nitActividad !== '', fn ($q) => $q->where('nit_empresa', $nitActividad))
-            ->when($accion !== '', fn ($q) => $q->where('accion', $accion))
-            ->orderByDesc('fecha')
-            ->paginate(15, ['*'], 'act')
-            ->withQueryString()
-            ->fragment('actividad');
-
         return view('superadmin.reportes.index', [
-            'alertas' => $alertas,
             'opticas' => $opticas,
             'conteos' => $conteos,
             'totalOpticas' => $todas->count(),
@@ -96,11 +75,6 @@ class ReporteController extends Controller
             ],
             'totalIngresos' => $totalIngresos,
             'cantidadPagos' => $pagos->count(),
-            'actividad' => $actividad,
-            'listaOpticas' => Empresa::orderBy('nombre')->get(['nit', 'nombre']),
-            'acciones' => Actividad::select('accion')->distinct()->orderBy('accion')->pluck('accion'),
-            'nitActividad' => $nitActividad,
-            'accion' => $accion,
             'etiquetas' => self::ETIQUETAS_ESTADO,
         ]);
     }
@@ -110,11 +84,15 @@ class ReporteController extends Controller
      */
     public function descargar(Request $request, string $reporte, string $formato): Response|BinaryFileResponse
     {
-        abort_unless(in_array($reporte, ['opticas', 'ingresos'], true) && in_array($formato, ['excel', 'pdf'], true), 404);
+        abort_unless(in_array($reporte, ['opticas', 'ingresos', 'licencias'], true) && in_array($formato, ['excel', 'pdf'], true), 404);
 
         Licencias::marcarVencidas();
 
-        $datos = $reporte === 'ingresos' ? $this->datosIngresos($request) : $this->datosOpticas($request);
+        $datos = match ($reporte) {
+            'ingresos' => $this->datosIngresos($request),
+            'licencias' => $this->datosLicencias($request),
+            default => $this->datosOpticas($request),
+        };
         $archivo = Str::slug($datos['archivo']) . '_' . now()->format('Y-m-d_His');
 
         if ($formato === 'pdf') {
@@ -189,6 +167,56 @@ class ReporteController extends Controller
                 'Periodo' => $periodo,
                 'Pagos aprobados' => (string) $pagos->count(),
                 'Total ingresos' => '$' . number_format($total, 0, ',', '.'),
+            ],
+        ];
+    }
+
+    /** Historial de licencias: pruebas, compras y renovaciones de todas las ópticas (sin las pendientes de pago). */
+    protected function datosLicencias(Request $request): array
+    {
+        $estado = in_array($request->get('lic'), ['activa', 'vencida', 'cancelada'], true) ? $request->get('lic') : 'todas';
+
+        $licencias = Licencia::with(['empresa', 'plan'])
+            ->where('estado', '<>', 'pendiente')
+            ->when($estado !== 'todas', fn ($q) => $q->where('estado', $estado))
+            ->orderByDesc('fecha_solicitud')
+            ->get();
+
+        $filas = [];
+        $filasExcel = [];
+        foreach ($licencias as $l) {
+            $dias = $l->estado === 'activa' ? $l->diasRestantes() : null;
+            $comun = [
+                $l->empresa->nombre ?? $l->nit_empresa,
+                $l->nit_empresa,
+                $l->plan->nombre ?? '—',
+                $l->fecha_inicio ? $l->fecha_inicio->format('d/m/Y') : '—',
+                $l->fecha_fin ? $l->fecha_fin->format('d/m/Y') : '—',
+                $dias === null ? '—' : (string) $dias,
+                $l->referencia_pago ?: '—',
+                ucfirst((string) $l->estado),
+            ];
+            $filas[] = array_merge($comun, ['$' . number_format((float) $l->valor, 0, ',', '.')]);
+            $filasExcel[] = array_merge($comun, [(float) $l->valor]);
+        }
+
+        $total = (float) $licencias->sum('valor');
+        $filtro = $estado === 'todas' ? 'Todas las licencias' : 'Licencias ' . $estado . 's';
+
+        return [
+            'archivo' => 'historial-de-licencias',
+            'hoja' => 'Licencias',
+            'titulo' => 'Historial de licencias',
+            'subtitulo' => $filtro . ' · ' . now()->format('d/m/Y'),
+            'encabezados' => ['Óptica', 'NIT', 'Plan', 'Inicio', 'Vence', 'Días', 'Referencia', 'Estado', 'Valor'],
+            'filas' => $filas,
+            'filas_excel' => $filasExcel,
+            'alinear' => [5 => 'R', 8 => 'R'],
+            'resumen' => [
+                'Licencias en el reporte' => (string) $licencias->count(),
+                'Activas' => (string) $licencias->where('estado', 'activa')->count(),
+                'Vencidas' => (string) $licencias->where('estado', 'vencida')->count(),
+                'Valor total' => '$' . number_format($total, 0, ',', '.'),
             ],
         ];
     }

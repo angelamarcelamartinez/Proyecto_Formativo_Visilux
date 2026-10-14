@@ -17,6 +17,9 @@ return Application::configure(basePath: dirname(__DIR__))
             'cambiar.password' => \App\Http\Middleware\CambiarPasswordObligatorio::class,
             'licencia' => \App\Http\Middleware\VerificarLicencia::class,
         ]);
+
+        // Estados de licencia al día y sesión cerrada a quien no es administrador si su licencia está inactiva
+        $middleware->appendToGroup('web', \App\Http\Middleware\LicenciasAlDia::class);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         // Si el formulario de contratar vuelve con errores, los datos de la

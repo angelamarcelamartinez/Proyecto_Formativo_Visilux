@@ -39,6 +39,7 @@
                 $menu = [
                     ['route' => 'superadmin.dashboard', 'match' => 'superadmin.dashboard', 'icon' => 'grid', 'label' => 'Panel general', 'badge' => $solicitudesPendientes ?? 0],
                     ['route' => 'superadmin.empresas.index', 'match' => 'superadmin.empresas.*', 'icon' => 'building', 'label' => 'Ópticas'],
+                    ['route' => 'superadmin.licencias.index', 'match' => 'superadmin.licencias.*', 'icon' => 'receipt', 'label' => 'Licencias'],
                     ['route' => 'superadmin.reportes.index', 'match' => 'superadmin.reportes.*', 'icon' => 'file-text', 'label' => 'Reportes'],
                     ['route' => 'superadmin.planes.index', 'match' => 'superadmin.planes.*', 'icon' => 'tag', 'label' => 'Planes'],
                 ];
@@ -58,11 +59,6 @@
 
             <p class="px-3 pt-5 pb-1 text-[11px] font-semibold uppercase tracking-wider text-muted">Accesos rápidos</p>
 
-            <a href="{{ route('superadmin.empresas.create') }}"
-               class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-ink/80 hover:bg-olive-100 transition">
-                @include('partials.icon', ['name' => 'plus', 'class' => 'w-5 h-5 shrink-0'])
-                Registrar óptica
-            </a>
             <a href="{{ url('/') }}" target="_blank"
                class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-ink/80 hover:bg-olive-100 transition">
                 @include('partials.icon', ['name' => 'eye', 'class' => 'w-5 h-5 shrink-0'])
@@ -85,7 +81,7 @@
     <div x-show="mobileNav" @click="mobileNav = false" x-cloak class="fixed inset-0 bg-ink/30 z-30 lg:hidden"></div>
 
     {{-- ---------- Main column ---------- --}}
-    <div class="flex-1 lg:ml-72 flex flex-col min-h-screen">
+    <div class="flex-1 min-w-0 lg:ml-72 flex flex-col min-h-screen">
 
         {{-- Topbar --}}
         <header class="h-20 sticky top-0 z-20 bg-cream/90 backdrop-blur border-b border-olive-100 flex items-center gap-4 px-4 sm:px-8">
@@ -97,17 +93,7 @@
                 @yield('breadcrumb', 'Panel general')
             </div>
 
-            {{-- Buscador de ópticas --}}
-            <form method="GET" action="{{ route('superadmin.empresas.index') }}" class="flex-1 max-w-md ml-auto relative">
-                <span class="absolute inset-y-0 left-3 flex items-center text-muted pointer-events-none">
-                    @include('partials.icon', ['name' => 'search', 'class' => 'w-4 h-4'])
-                </span>
-                <input type="text" name="q" value="{{ request()->routeIs('superadmin.empresas.index') ? request('q') : '' }}"
-                       placeholder="Buscar óptica por nombre, NIT o correo..."
-                       class="w-full bg-creamdark/70 border border-olive-100 rounded-full py-2.5 pl-9 pr-4 text-sm placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-olive-300">
-            </form>
-
-            <div class="flex items-center gap-3 pl-2">
+            <div class="flex items-center gap-3 pl-2 ml-auto">
                 <div class="text-right hidden sm:block">
                     <p class="text-sm font-semibold leading-tight">{{ auth()->user()->nombres ?? 'Administrador' }}</p>
                     <p class="text-[11px] text-muted leading-tight">{{ auth()->user()->rol->nombre_rol ?? 'Superadmin' }}</p>
@@ -118,7 +104,7 @@
             </div>
         </header>
 
-        <main class="flex-1 px-4 sm:px-8 py-6">
+        <main class="flex-1 min-w-0 px-4 sm:px-8 py-6">
             @if (session('success'))
                 <div class="mb-6 rounded-xl border border-green-200 bg-green-50 text-green-800 px-4 py-3 text-sm">
                     {{ session('success') }}

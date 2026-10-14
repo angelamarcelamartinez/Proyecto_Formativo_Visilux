@@ -96,7 +96,7 @@
 
             <div class="grid sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-8">
                 @foreach ($planes as $plan)
-                    @php $bloqueado = ($plan->es_prueba && $empresa->prueba_usada) || $pendiente; @endphp
+                    @php $bloqueado = $plan->es_prueba || $pendiente; @endphp
                     <div class="bg-white rounded-2xl border shadow-card p-5 flex flex-col {{ $plan->destacado ? 'border-olive-300 ring-1 ring-olive-300' : 'border-olive-100' }} {{ $plan->es_prueba && $empresa->prueba_usada ? 'opacity-60' : '' }}">
                         <div class="flex items-center justify-between">
                             <p class="font-medium">{{ $plan->nombre }}</p>
@@ -112,21 +112,18 @@
                             @endif
                         </p>
 
-                        <form method="POST" action="{{ route('admin.licencia.solicitar') }}" class="mt-auto pt-5">
-                            @csrf
-                            <input type="hidden" name="id_plan" value="{{ $plan->id_plan }}">
-                            <button type="submit" @disabled($bloqueado)
-                                    class="w-full text-sm font-medium px-4 py-2.5 rounded-xl transition
-                                           {{ $bloqueado ? 'bg-creamdark text-muted cursor-not-allowed' : 'bg-olive-600 hover:bg-olive-700 text-cream' }}">
-                                @if ($plan->es_prueba && $empresa->prueba_usada)
-                                    Ya usaste la prueba
-                                @elseif ($pendiente)
-                                    Tienes una solicitud en curso
-                                @else
-                                    Solicitar este plan
-                                @endif
-                            </button>
-                        </form>
+                        <div class="mt-auto pt-5">
+                            @if ($bloqueado)
+                                <span class="block w-full text-center text-sm font-medium px-4 py-2.5 rounded-xl bg-creamdark text-muted cursor-not-allowed">
+                                    {{ $plan->es_prueba ? 'La prueba no se renueva' : 'Tienes una renovación en curso' }}
+                                </span>
+                            @else
+                                <a href="{{ route('admin.renovacion.index', ['plan' => $plan->id_plan]) }}"
+                                   class="block w-full text-center text-sm font-medium px-4 py-2.5 rounded-xl transition bg-olive-600 hover:bg-olive-700 text-cream">
+                                    Pagar y renovar
+                                </a>
+                            @endif
+                        </div>
                     </div>
                 @endforeach
             </div>
