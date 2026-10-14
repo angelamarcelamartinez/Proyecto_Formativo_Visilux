@@ -11,7 +11,7 @@
     <!-- Fuentes y estilos -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=Fredoka:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
     
@@ -38,6 +38,9 @@
                 </li>
                 <li class="nav-item">
                     <a class="nav-link {{ request()->routeIs('productos.index') ? 'active' : '' }}" href="{{ route('productos.index') }}">Productos</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {{ request()->routeIs('productos.ninos') ? 'active' : '' }}" href="{{ route('productos.ninos') }}">Niños</a>
                 </li>
                 <li class="nav-item">
                     <a class="nav-link {{ request()->routeIs('terapia-visual') ? 'active' : '' }}" href="{{ route('terapia-visual') }}">Terapia Visual</a>

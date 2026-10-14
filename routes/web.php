@@ -46,6 +46,7 @@ Route::post('/agendar-cita', [SiteController::class, 'guardarCita'])->name('cita
 
 // --- Catálogo público de productos ---
 Route::get('/productos', [ProductoController::class, 'index'])->name('productos.index');
+Route::get('/productos/ninos', [ProductoController::class, 'ninos'])->name('productos.ninos');
 
 // --- Carrito de compras (el controlador exige sesión iniciada por su cuenta,
 //     con un mensaje propio -- por eso no llevan el middleware 'auth' aquí) ---

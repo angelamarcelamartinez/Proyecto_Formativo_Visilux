@@ -20,7 +20,7 @@ class Empresa extends Model
     protected $fillable = [
         'nit', 'nombre', 'slug', 'email', 'telefono', 'direccion',
         'ciudad', 'estado', 'prueba_usada', 'fecha_registro',
-        'camara_de_comercio',
+        'camara_comercio',
     ];
 
     protected $casts = [
@@ -61,7 +61,7 @@ class Empresa extends Model
     /** ¿Tiene cargado el PDF de la Cámara de Comercio? */
     public function tieneCamara(): bool
     {
-        return \App\Support\CamaraComercio::existe($this->camara_de_comercio);
+        return \App\Support\CamaraComercio::existe($this->camara_comercio);
     }
 
     /**

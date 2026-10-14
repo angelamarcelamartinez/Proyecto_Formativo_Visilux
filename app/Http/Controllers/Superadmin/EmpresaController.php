@@ -154,7 +154,7 @@ class EmpresaController extends Controller
         $nuevoNit = (string) \App\Support\Nit::normalizar($data['nit']);
         $cambioNit = $nuevoNit !== (string) $empresa->nit;
 
-        $anterior = $empresa->camara_de_comercio;
+        $anterior = $empresa->camara_comercio;
         $rutaCamara = $request->hasFile('camara_comercio')
             ? CamaraComercio::guardar($request->file('camara_comercio'), $nuevoNit)
             : null;
@@ -167,7 +167,7 @@ class EmpresaController extends Controller
                 }
 
                 $empresa->update(array_filter([
-                    'camara_de_comercio' => $rutaCamara,
+                    'camara_comercio' => $rutaCamara,
                 ]) + [
                     'nombre' => $data['nombre'],
                     'slug' => Empresa::slugDisponible(($data['slug'] ?? null) ?: $data['nombre'], $empresa->nit),
@@ -318,7 +318,7 @@ class EmpresaController extends Controller
         $empresa = Empresa::findOrFail($nit);
         abort_unless($empresa->tieneCamara(), 404, 'Esta óptica no tiene certificado cargado.');
 
-        return response()->file(CamaraComercio::ruta($empresa->camara_de_comercio), [
+        return response()->file(CamaraComercio::ruta($empresa->camara_comercio), [
             'Content-Type' => 'application/pdf',
             'Content-Disposition' => 'inline; filename="camara-comercio-' . $empresa->nit . '.pdf"',
         ]);

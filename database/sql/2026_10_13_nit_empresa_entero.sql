@@ -16,7 +16,7 @@
 --  pegar todo este archivo → Continuar.  (Haz una copia de la base antes.)
 --  Se puede ejecutar más de una vez sin dañar nada.
 --
---  La columna empresa.camara_de_comercio conserva su nombre (el código usa ese nombre).
+--  La columna empresa.camara_comercio conserva su nombre (el código usa ese nombre).
 -- =====================================================================
 
 SET FOREIGN_KEY_CHECKS = 0;
@@ -112,7 +112,7 @@ BEGIN
 
     DROP TEMPORARY TABLE IF EXISTS tmp_fk_nit;
 
-    -- (La columna del certificado se queda con el nombre `camara_de_comercio`; el código ya usa ese nombre.)
+    -- (La columna del certificado se queda con el nombre `camara_comercio`; el código ya usa ese nombre.)
 END$$
 
 DELIMITER ;

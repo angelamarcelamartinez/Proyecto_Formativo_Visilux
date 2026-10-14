@@ -51,7 +51,16 @@
                                         <span class="text-muted">—</span>
                                     @endif
                                 </td>
-                                <td class="py-3 pr-6 text-right">
+                                <td class="py-3 pr-6 text-right whitespace-nowrap">
+                                    <form method="POST" action="{{ route('superadmin.empresas.admins.credenciales', [$empresa->nit, $a->documento]) }}" class="inline"
+                                          onsubmit="return confirm('Se generará una contraseña temporal nueva y se enviará al correo de la óptica y al del administrador. ¿Continuar?')">
+                                        @csrf
+                                        <button type="submit"
+                                                class="inline-flex items-center gap-1.5 text-sm font-medium text-olive-700 hover:bg-olive-100 transition px-3 py-1.5 rounded-lg">
+                                            @include('partials.icon', ['name' => 'mail', 'class' => 'w-4 h-4'])
+                                            Reenviar credenciales
+                                        </button>
+                                    </form>
                                     <a href="{{ route('superadmin.empresas.admins.edit', [$empresa->nit, $a->documento]) }}"
                                        class="inline-flex items-center gap-1.5 text-sm font-medium text-olive-700 hover:bg-olive-100 transition px-3 py-1.5 rounded-lg">
                                         @include('partials.icon', ['name' => 'pencil', 'class' => 'w-4 h-4'])

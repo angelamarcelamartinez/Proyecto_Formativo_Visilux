@@ -74,7 +74,6 @@
                                     <a href="{{ route('superadmin.empresas.show', $o->nit) }}" class="font-medium hover:text-olive-700 break-words">{{ $o->empresa }}</a>
                                     <p class="text-[11px] text-muted">NIT {{ $o->nit }}</p>
                                     <p class="text-[11px] text-ink/60 break-all">{{ $o->email }}</p>
-                                    @include('superadmin.empresas.partials.admin-info', ['lista' => $admins[$o->nit] ?? collect(), 'nit' => $o->nit])
                                 </td>
                                 <td class="py-3 pr-3 break-words">
                                     {{ $o->plan ?? '—' }}
@@ -114,7 +113,6 @@
                                 <a href="{{ route('superadmin.empresas.show', $o->nit) }}" class="font-medium hover:text-olive-700 break-words">{{ $o->empresa }}</a>
                                 <p class="text-[11px] text-muted">NIT {{ $o->nit }}</p>
                                 <p class="text-[11px] text-ink/60 break-all">{{ $o->email }}</p>
-                                @include('superadmin.empresas.partials.admin-info', ['lista' => $admins[$o->nit] ?? collect(), 'nit' => $o->nit])
                             </div>
                             <div class="shrink-0">
                                 @include('partials.estado-licencia', ['estado' => $o->estado_licencia, 'solo' => 'estado'])
