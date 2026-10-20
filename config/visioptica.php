@@ -49,7 +49,7 @@ return [
         'serv2_texto' => 'Programas personalizados para mejorar la coordinación ocular, enfoque y rendimiento visual.',
         'serv2_items' => "Ejercicios visuales guiados\nSeguimiento periódico\nEquipos de última generación",
 
-        'prof_nombre' => 'Dra. Catalina Fernández',
+        'prof_nombre' => 'Dra. Catalina Esquivel',
         'prof_cargo' => 'Optómetra Especializada',
         'prof_texto' => 'Con más de 15 años de experiencia, combina precisión clínica con un trato cercano.',
         'prof_credenciales' => "Optometría Certificada | Universidad Nacional de Colombia\n"

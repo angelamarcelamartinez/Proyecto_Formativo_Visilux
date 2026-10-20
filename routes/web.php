@@ -46,6 +46,7 @@ Route::post('/agendar-cita', [SiteController::class, 'guardarCita'])->name('cita
 
 // --- Catálogo público de productos ---
 Route::get('/productos', [ProductoController::class, 'index'])->name('productos.index');
+Route::get('/productos/ninos', [ProductoController::class, 'ninos'])->name('productos.ninos');
 
 // --- Carrito de compras (el controlador exige sesión iniciada por su cuenta,
 //     con un mensaje propio -- por eso no llevan el middleware 'auth' aquí) ---
@@ -106,16 +107,24 @@ Route::prefix('superadmin')->middleware(['superadmin'])->name('superadmin.')->gr
 
     // Ópticas
     Route::get('/opticas', [SuperEmpresaController::class, 'index'])->name('empresas.index');
-    Route::get('/opticas/nueva', [SuperEmpresaController::class, 'create'])->name('empresas.create');
-    Route::post('/opticas', [SuperEmpresaController::class, 'store'])->name('empresas.store');
     Route::get('/opticas/{nit}', [SuperEmpresaController::class, 'show'])->name('empresas.show');
     // Certificado de la Cámara de Comercio (PDF privado): se abre desde una ventana emergente
     Route::get('/opticas/{nit}/camara-comercio', [SuperEmpresaController::class, 'camara'])->name('empresas.camara');
     Route::get('/opticas/{nit}/editar', [SuperEmpresaController::class, 'edit'])->name('empresas.edit');
     Route::put('/opticas/{nit}', [SuperEmpresaController::class, 'update'])->name('empresas.update');
     Route::post('/opticas/{nit}/licencia', [SuperEmpresaController::class, 'asignarLicencia'])->name('empresas.licencia');
+    // Administradores de cada óptica: ver y editar
+    Route::get('/opticas/{nit}/administradores', [SuperEmpresaController::class, 'administradores'])->name('empresas.admins');
+    Route::get('/opticas/{nit}/administradores/{documento}/editar', [SuperEmpresaController::class, 'editarAdmin'])->name('empresas.admins.edit');
+    Route::put('/opticas/{nit}/administradores/{documento}', [SuperEmpresaController::class, 'actualizarAdmin'])->name('empresas.admins.update');
+
+    // Licencias: historial (con descarga) y ópticas que requieren atención
+    Route::get('/licencias', [SuperLicenciaController::class, 'index'])->name('licencias.index');
     // Activar / desactivar a un administrador de la óptica (p. ej. inactivado por intentos fallidos)
     Route::post('/opticas/{nit}/usuarios/{documento}/estado', [SuperEmpresaController::class, 'cambiarEstadoUsuario'])->name('empresas.usuario.estado');
+
+    // Reenviar las credenciales (contraseña temporal nueva) al correo de la óptica y del administrador
+    Route::post('/opticas/{nit}/administradores/{documento}/credenciales', [SuperEmpresaController::class, 'reenviarCredenciales'])->name('empresas.admins.credenciales');
 
     // Aprobar o rechazar pagos (se hace desde el Panel general)
     Route::post('/licencias/{id}/aprobar', [SuperLicenciaController::class, 'aprobar'])->name('licencias.aprobar');
@@ -140,6 +149,19 @@ Route::prefix('admin')->middleware(['auth', 'cambiar.password', 'admin', 'licenc
     Route::post('/mi-licencia', [AdminLicenciaController::class, 'solicitar'])->name('licencia.solicitar');
     Route::delete('/mi-licencia/{id}', [AdminLicenciaController::class, 'cancelar'])->name('licencia.cancelar');
 
+    // Renovación con tarjeta. Si la licencia venció, esta es la única pantalla del panel que el admin puede usar.
+    Route::get('/renovar-licencia', [\App\Http\Controllers\Admin\RenovacionController::class, 'index'])->name('renovacion.index');
+    Route::post('/renovar-licencia', [\App\Http\Controllers\Admin\RenovacionController::class, 'store'])->name('renovacion.store');
+
+    // Equipo: el administrador crea y administra a los empleados de su óptica (les llegan las credenciales por correo)
+    Route::get('/equipo', [\App\Http\Controllers\Admin\EquipoController::class, 'index'])->name('equipo.index');
+    Route::get('/equipo/nuevo', [\App\Http\Controllers\Admin\EquipoController::class, 'create'])->name('equipo.create');
+    Route::post('/equipo', [\App\Http\Controllers\Admin\EquipoController::class, 'store'])->name('equipo.store');
+    Route::get('/equipo/{documento}/editar', [\App\Http\Controllers\Admin\EquipoController::class, 'edit'])->name('equipo.edit');
+    Route::put('/equipo/{documento}', [\App\Http\Controllers\Admin\EquipoController::class, 'update'])->name('equipo.update');
+    Route::post('/equipo/{documento}/estado', [\App\Http\Controllers\Admin\EquipoController::class, 'estado'])->name('equipo.estado');
+    Route::post('/equipo/{documento}/credenciales', [\App\Http\Controllers\Admin\EquipoController::class, 'reenviar'])->name('equipo.reenviar');
+
     // Recordatorios de cita de control
     Route::get('/citas-control', [ControlController::class, 'index'])->name('control.index');
     Route::post('/citas-control/enviar-todos', [ControlController::class, 'enviarTodos'])->name('control.enviarTodos');
@@ -148,6 +170,9 @@ Route::prefix('admin')->middleware(['auth', 'cambiar.password', 'admin', 'licenc
     // Activar / desactivar usuarios (botón junto a Editar y Eliminar)
     Route::post('/usuario/{documento}/estado', [\App\Http\Controllers\Admin\UsuarioEstadoController::class, 'cambiar'])
         ->name('usuario.estado');
+
+    // "Por contactar": marcar un mensaje de Contáctanos como contactado (o volverlo a pendiente)
+    Route::post('/por-contactar/{id}/estado', [\App\Http\Controllers\Admin\ContactoController::class, 'estado'])->name('contacto.estado');
 
     // CRUD genérico
     // Autocompletar datos del paciente por documento (citas, fórmulas médicas)

@@ -29,6 +29,20 @@ class Empresa extends Model
         'fecha_registro' => 'datetime',
     ];
 
+    /**
+     * La óptica que se muestra en «/»: la de VISIOPTICA_EMPRESA_PRINCIPAL. Se busca con o sin guion
+     * (9000000001 / 900000000-1) y, si no existe, se usa la primera óptica registrada para no dejar el
+     * sitio en blanco.
+     */
+    public static function principal(): ?self
+    {
+        $nit = config('visioptica.empresa_principal');
+
+        return static::find($nit)
+            ?? static::whereRaw("REPLACE(nit, '-', '') = ?", [preg_replace('/\D/', '', (string) $nit)])->first()
+            ?? static::orderBy('fecha_registro')->first();
+    }
+
     public function licencias()
     {
         return $this->hasMany(Licencia::class, 'nit_empresa', 'nit');

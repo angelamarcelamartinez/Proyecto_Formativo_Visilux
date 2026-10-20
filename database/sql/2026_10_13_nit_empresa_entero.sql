@@ -16,8 +16,7 @@
 --  pegar todo este archivo → Continuar.  (Haz una copia de la base antes.)
 --  Se puede ejecutar más de una vez sin dañar nada.
 --
---  Además renombra empresa.camara_de_comercio → camara_comercio, que es el
---  nombre que usa el código (sin esto, contratar un plan daba error 1054).
+--  La columna empresa.camara_comercio conserva su nombre (el código usa ese nombre).
 -- =====================================================================
 
 SET FOREIGN_KEY_CHECKS = 0;
@@ -113,15 +112,7 @@ BEGIN
 
     DROP TEMPORARY TABLE IF EXISTS tmp_fk_nit;
 
-    -- 5. Corrección aparte: el código (modelo Empresa, registro desde /planes y panel
-    --    del superadmin) usa la columna `camara_comercio`, pero en la base se llama
-    --    `camara_de_comercio`, y por eso fallaba el registro. Se renombra solo si hace falta.
-    IF EXISTS (SELECT 1 FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE()
-               AND TABLE_NAME = 'empresa' AND COLUMN_NAME = 'camara_de_comercio')
-       AND NOT EXISTS (SELECT 1 FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE()
-               AND TABLE_NAME = 'empresa' AND COLUMN_NAME = 'camara_comercio') THEN
-        ALTER TABLE empresa CHANGE camara_de_comercio camara_comercio VARCHAR(500) NOT NULL COMMENT 'Ruta del PDF de cámara de comercio';
-    END IF;
+    -- (La columna del certificado se queda con el nombre `camara_comercio`; el código ya usa ese nombre.)
 END$$
 
 DELIMITER ;

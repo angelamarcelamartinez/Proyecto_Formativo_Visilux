@@ -12,7 +12,7 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
     
     <!-- Tus estilos personalizados -->
-    <link href="{{ asset('assets/css/style.css') }}" rel="stylesheet">
+    <link href="{{ asset('assets/css/style.css') }}?v={{ @filemtime(public_path('assets/css/style.css')) ?: '20261014' }}" rel="stylesheet">
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
     <!-- Validación en línea del correo: borde verde si está registrado, rojo si no -->
@@ -157,23 +157,14 @@
                             @if ($inactiva['es_admin'])
                                 <p class="text-muted small mb-4">
                                     Por seguridad bloqueamos tu cuenta de administrador después de varios intentos fallidos.
-                                    Comunícate con VisiOptica para que la active.
-                                </p>
-                            @elseif ($inactiva['ya_solicitada'])
-                                <p class="text-muted small mb-4">
-                                    Ya enviaste una solicitud de activación al administrador de la óptica.
-                                    Te avisaremos por correo cuando tu cuenta esté activa.
+                                    VisiOptica ya la ve como bloqueada en su panel y la activará; cuando lo haga, te avisaremos por correo.
                                 </p>
                             @else
                                 <p class="text-muted small mb-4">
                                     Por seguridad bloqueamos tu cuenta después de varios intentos fallidos.
-                                    <strong>Solicita su activación aquí:</strong> le enviaremos un correo al administrador de la óptica.
+                                    El administrador de la óptica ya la ve como bloqueada en su panel y la activará;
+                                    cuando lo haga, te avisaremos por correo. Si es urgente, comunícate con la óptica.
                                 </p>
-                                <button type="button" id="btn-enviar-solicitud"
-                                        class="btn btn-gradient w-100 rounded-pill py-2 fw-semibold mb-2">
-                                    <span class="spinner-border spinner-border-sm me-2 d-none" aria-hidden="true"></span>
-                                    Enviar tu solicitud
-                                </button>
                             @endif
                         </div>
 
@@ -192,55 +183,8 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 
     @if (session('cuenta_inactiva'))
-    <!-- Abre la ventana de cuenta inactivada y envía la solicitud por correo al administrador -->
     <script>
-    (function () {
-        const modal = new bootstrap.Modal(document.getElementById('modalCuentaInactiva'));
-        modal.show();
-
-        const boton = document.getElementById('btn-enviar-solicitud');
-        if (!boton) return;
-
-        const respuesta = document.getElementById('reactivacion-respuesta');
-        const contenido = document.getElementById('reactivacion-contenido');
-        const spinner = boton.querySelector('.spinner-border');
-
-        function mostrar(ok, texto) {
-            respuesta.className = 'small mb-3 alert py-2 ' + (ok ? 'alert-success' : 'alert-danger');
-            respuesta.textContent = texto;
-        }
-
-        boton.addEventListener('click', async function () {
-            boton.disabled = true;
-            spinner.classList.remove('d-none');
-
-            try {
-                const resp = await fetch("{{ route('login.solicitar-reactivacion') }}", {
-                    method: 'POST',
-                    headers: {
-                        'Accept': 'application/json',
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
-                    }
-                });
-                const datos = await resp.json().catch(() => ({}));
-
-                if (resp.ok && datos.ok) {
-                    contenido.classList.add('d-none'); // ya no se puede volver a enviar
-                    mostrar(true, datos.mensaje);
-                } else {
-                    mostrar(false, datos.mensaje || (resp.status === 429
-                        ? 'Demasiados intentos. Espera un minuto e inténtalo de nuevo.'
-                        : 'No pudimos enviar la solicitud. Inténtalo de nuevo.'));
-                    boton.disabled = false;
-                }
-            } catch (e) {
-                mostrar(false, 'No hay conexión. Inténtalo de nuevo.');
-                boton.disabled = false;
-            }
-
-            spinner.classList.add('d-none');
-        });
-    })();
+        new bootstrap.Modal(document.getElementById('modalCuentaInactiva')).show();
     </script>
     @endif
 

@@ -1,0 +1,9 @@
+# Enlace simbolico creado por "php artisan storage:link"
+/storage
+
+# Assets compilados por Vite (se generan con "npm run build")
+/build
+/hot
+
+# Archivos subidos por usuarios en tiempo de ejecucion
+/uploads

@@ -17,4 +17,7 @@ require __DIR__.'/../vendor/autoload.php';
 /** @var Application $app */
 $app = require_once __DIR__.'/../bootstrap/app.php';
 
+// La carpeta pública es la de ESTE index.php (en el hosting puede ser public_html y no visilux-cc/public)
+$app->usePublicPath(__DIR__);
+
 $app->handleRequest(Request::capture());

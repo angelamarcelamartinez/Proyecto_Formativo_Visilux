@@ -18,6 +18,8 @@ return Application::configure(basePath: dirname(__DIR__))
             'licencia' => \App\Http\Middleware\VerificarLicencia::class,
         ]);
 
+        // Estados de licencia al día y sesión cerrada a quien no es administrador si su licencia está inactiva
+        $middleware->appendToGroup('web', \App\Http\Middleware\LicenciasAlDia::class);
         // Saca a los usuarios inactivados aunque ya tuvieran la sesión abierta.
         $middleware->web(append: [
             \App\Http\Middleware\CuentaActiva::class,

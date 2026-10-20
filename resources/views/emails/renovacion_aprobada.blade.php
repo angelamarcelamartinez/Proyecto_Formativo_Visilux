@@ -16,6 +16,10 @@
         </tr>
     </table>
 
+    <p style="margin:0 0 20px; font-size:14px;">
+        Ya pueden entrar todos los usuarios de la óptica. El administrador usa <strong>las mismas credenciales de siempre</strong>.
+    </p>
+
     <p style="margin:0 0 24px; text-align:center;">
         <a href="{{ url('/login') }}" style="display:inline-block; background:#7E6427; color:#FAF7F2; text-decoration:none; padding:12px 28px; border-radius:10px; font-weight:bold;">
             Entrar al panel

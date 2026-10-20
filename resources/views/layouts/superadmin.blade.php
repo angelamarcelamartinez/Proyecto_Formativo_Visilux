@@ -11,7 +11,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 
     {{-- Estilos y scripts locales: el panel funciona sin depender de CDNs --}}
-    <link rel="stylesheet" href="{{ asset('assets/css/panel.css') }}?v={{ filemtime(public_path('assets/css/panel.css')) }}">
+    <link rel="stylesheet" href="{{ asset('assets/css/panel.css') }}?v={{ @filemtime(public_path('assets/css/panel.css')) ?: '20261014' }}">
     <script defer src="{{ asset('assets/js/alpine-collapse.min.js') }}"></script>
     <script defer src="{{ asset('assets/js/alpine.min.js') }}"></script>
     <script defer src="{{ asset('assets/js/chart.umd.min.js') }}"></script>
@@ -39,6 +39,7 @@
                 $menu = [
                     ['route' => 'superadmin.dashboard', 'match' => 'superadmin.dashboard', 'icon' => 'grid', 'label' => 'Panel general', 'badge' => $solicitudesPendientes ?? 0],
                     ['route' => 'superadmin.empresas.index', 'match' => 'superadmin.empresas.*', 'icon' => 'building', 'label' => 'Ópticas'],
+                    ['route' => 'superadmin.licencias.index', 'match' => 'superadmin.licencias.*', 'icon' => 'receipt', 'label' => 'Licencias'],
                     ['route' => 'superadmin.reportes.index', 'match' => 'superadmin.reportes.*', 'icon' => 'file-text', 'label' => 'Reportes'],
                     ['route' => 'superadmin.planes.index', 'match' => 'superadmin.planes.*', 'icon' => 'tag', 'label' => 'Planes'],
                 ];
@@ -58,11 +59,6 @@
 
             <p class="px-3 pt-5 pb-1 text-[11px] font-semibold uppercase tracking-wider text-muted">Accesos rápidos</p>
 
-            <a href="{{ route('superadmin.empresas.create') }}"
-               class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-ink/80 hover:bg-olive-100 transition">
-                @include('partials.icon', ['name' => 'plus', 'class' => 'w-5 h-5 shrink-0'])
-                Registrar óptica
-            </a>
             <a href="{{ url('/') }}" target="_blank"
                class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-ink/80 hover:bg-olive-100 transition">
                 @include('partials.icon', ['name' => 'eye', 'class' => 'w-5 h-5 shrink-0'])
@@ -85,7 +81,7 @@
     <div x-show="mobileNav" @click="mobileNav = false" x-cloak class="fixed inset-0 bg-ink/30 z-30 lg:hidden"></div>
 
     {{-- ---------- Main column ---------- --}}
-    <div class="flex-1 lg:ml-72 flex flex-col min-h-screen">
+    <div class="flex-1 min-w-0 lg:ml-72 flex flex-col min-h-screen">
 
         {{-- Topbar --}}
         <header class="h-20 sticky top-0 z-20 bg-cream/90 backdrop-blur border-b border-olive-100 flex items-center gap-4 px-4 sm:px-8">
@@ -97,15 +93,39 @@
                 @yield('breadcrumb', 'Panel general')
             </div>
 
-            {{-- Buscador de ópticas --}}
-            <form method="GET" action="{{ route('superadmin.empresas.index') }}" class="flex-1 max-w-md ml-auto relative">
-                <span class="absolute inset-y-0 left-3 flex items-center text-muted pointer-events-none">
-                    @include('partials.icon', ['name' => 'search', 'class' => 'w-4 h-4'])
-                </span>
-                <input type="text" name="q" value="{{ request()->routeIs('superadmin.empresas.index') ? request('q') : '' }}"
-                       placeholder="Buscar óptica por nombre, NIT o correo..."
-                       class="w-full bg-creamdark/70 border border-olive-100 rounded-full py-2.5 pl-9 pr-4 text-sm placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-olive-300">
-            </form>
+            {{-- Notificaciones: administradores bloqueados --}}
+            <div class="relative ml-auto" x-data="{ open: false }" @click.outside="open = false" @keydown.escape.window="open = false">
+                <button type="button" @click="open = !open" title="Administradores bloqueados"
+                        class="relative w-10 h-10 rounded-full border border-olive-100 bg-white flex items-center justify-center text-ink/70 hover:text-ink">
+                    @include('partials.icon', ['name' => 'lock', 'class' => 'w-5 h-5'])
+                    @if (($adminsBloqueados ?? collect())->count() > 0)
+                        <span class="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-red-600 text-white text-[10px] font-bold flex items-center justify-center">{{ $adminsBloqueados->count() }}</span>
+                    @endif
+                </button>
+
+                <div x-show="open" x-cloak x-transition
+                     class="absolute right-0 mt-2 w-80 max-w-[calc(100vw-2rem)] bg-white border border-olive-100 rounded-xl shadow-lg overflow-hidden z-40">
+                    <div class="px-4 py-3 border-b border-olive-100 text-sm font-semibold">Administradores bloqueados</div>
+                    <div class="max-h-96 overflow-y-auto divide-y divide-olive-100">
+                        @forelse (($adminsBloqueados ?? collect()) as $adm)
+                            <div class="px-4 py-3 text-sm">
+                                <p class="font-semibold leading-tight">{{ trim($adm->nombres . ' ' . $adm->apellido) }}</p>
+                                <p class="text-xs text-muted">{{ $adm->empresa->nombre ?? 'Sin óptica' }} · {{ $adm->email }}</p>
+                                <p class="text-xs text-red-700 mt-1">
+                                    {{ $adm->por_intentos ? 'Bloqueado por 4 intentos fallidos' : 'Cuenta inactiva' }}
+                                    @if ($adm->bloqueado_desde) · {{ $adm->bloqueado_desde->diffForHumans() }} @endif
+                                </p>
+                                <form method="POST" action="{{ route('superadmin.empresas.usuario.estado', [$adm->nit_empresa, $adm->documento]) }}" class="mt-2">
+                                    @csrf
+                                    <button type="submit" class="px-3 py-1.5 rounded-lg bg-ink text-cream text-xs font-semibold">Desbloquear</button>
+                                </form>
+                            </div>
+                        @empty
+                            <p class="px-4 py-6 text-sm text-muted text-center">No hay administradores bloqueados.</p>
+                        @endforelse
+                    </div>
+                </div>
+            </div>
 
             <div class="flex items-center gap-3 pl-2">
                 <div class="text-right hidden sm:block">
@@ -118,7 +138,7 @@
             </div>
         </header>
 
-        <main class="flex-1 px-4 sm:px-8 py-6">
+        <main class="flex-1 min-w-0 px-4 sm:px-8 py-6">
             @if (session('success'))
                 <div class="mb-6 rounded-xl border border-green-200 bg-green-50 text-green-800 px-4 py-3 text-sm">
                     {{ session('success') }}

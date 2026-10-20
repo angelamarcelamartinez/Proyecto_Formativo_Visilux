@@ -125,7 +125,7 @@
 
 <dialog id="cookieDialog" class="cookie-dialog">
     <h2 class="cookie-header">
-        <i class="fas fa-cookie-bite me-2"></i> Gestión de Cookies
+        <span class="me-2">🍪</span> Gestión de Cookies
     </h2>
 
     <p class="cookie-body">
@@ -219,16 +219,25 @@
         });
 
         btnDeny.addEventListener("click", () => {
-            localStorage.removeItem("cookieSettings");
+            // Se guarda el rechazo para que el aviso no vuelva a salir en cada página
+            localStorage.setItem(
+                "cookieSettings",
+                JSON.stringify({
+                    necessary: true,
+                    preferences: false,
+                    analytics: false
+                })
+            );
             console.log("Cookies rechazadas.");
         });
 
         btnCustomize.addEventListener("click", () => {
-            cookieOptions.style.display = "block";
-            btnCustomize.style.display = "none";
-        });
-
-        cookieOptions.addEventListener("change", () => {
+            // 1er clic: muestra las opciones. 2do clic: guarda la selección y cierra
+            if (cookieOptions.style.display === "none") {
+                cookieOptions.style.display = "block";
+                btnCustomize.textContent = "Guardar selección";
+                return;
+            }
             localStorage.setItem(
                 "cookieSettings",
                 JSON.stringify({
@@ -237,7 +246,9 @@
                     analytics: analyticsCookies.checked
                 })
             );
+            cookieDialog.close ? cookieDialog.close() : cookieDialog.removeAttribute("open");
             console.log("Preferencias personalizadas guardadas.");
         });
+
     });
 </script>

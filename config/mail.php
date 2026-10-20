@@ -112,7 +112,8 @@ return [
 
     'from' => [
         'address' => env('MAIL_FROM_ADDRESS', 'hello@example.com'),
-        'name' => env('MAIL_FROM_NAME', env('APP_NAME', 'Laravel')),
+        // Los correos siempre salen "de parte de Visilux", aunque el .env diga APP_NAME=Laravel.
+        'name' => (env('MAIL_FROM_NAME') && env('MAIL_FROM_NAME') !== 'Laravel') ? env('MAIL_FROM_NAME') : 'Visilux',
     ],
 
 ];

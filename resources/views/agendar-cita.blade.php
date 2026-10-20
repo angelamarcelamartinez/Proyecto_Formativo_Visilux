@@ -138,6 +138,7 @@
                                     @endforeach
                                 </select>
                                 @error('id_tipo_cita') <span class="invalid-feedback d-block">{{ $message }}</span> @enderror
+                                <div class="form-text">Las citas duran 30 minutos; las terapias, 1 hora.</div>
                             </div>
                             <div class="col-md-6">
                                 <label for="id_motivo" class="form-label fw-medium">Motivo de la cita</label>
@@ -208,6 +209,7 @@
 <script>
 (function () {
     const fecha = document.getElementById('fecha');
+    const tipo = document.getElementById('id_tipo_cita');
     const cont = document.getElementById('turnos');
     const hora = document.getElementById('hora');
     const opt = document.getElementById('id_optometra');
@@ -228,9 +230,14 @@
     function cargar(conservar) {
         if (!fecha.value) return;
         if (!conservar) seleccionar('', '');
+        if (!tipo.value) {
+            cont.innerHTML = '<div class="alert alert-info small mb-0">Primero escoge el tipo de cita para ver los horarios disponibles.</div>';
+            seleccionar('', '');
+            return;
+        }
         cont.innerHTML = '<p class="text-muted small mb-0"><span class="spinner-border spinner-border-sm me-2"></span>Buscando horarios...</p>';
 
-        fetch(cont.dataset.url + '?fecha=' + encodeURIComponent(fecha.value), { headers: { 'Accept': 'application/json' } })
+        fetch(cont.dataset.url + '?fecha=' + encodeURIComponent(fecha.value) + '&id_tipo_cita=' + encodeURIComponent(tipo.value), { headers: { 'Accept': 'application/json' } })
             .then(r => r.json())
             .then(data => {
                 const turnos = data.turnos || [];
@@ -240,7 +247,8 @@
                     seleccionar('', '');
                     return;
                 }
-                cont.innerHTML = '<p class="small fw-medium mb-2">Horarios disponibles (' + data.dia + '):</p>' +
+                cont.innerHTML = '<p class="small fw-medium mb-2">Horarios disponibles (' + data.dia + ') · cada cita dura ' +
+                    (data.minutos >= 60 ? '1 hora' : data.minutos + ' minutos') + ':</p>' +
                     '<div class="d-flex flex-wrap gap-2">' + turnos.map(t =>
                         '<button type="button" class="btn btn-outline-secondary btn-sm rounded-3 turno-btn" data-hora="' + t.hora +
                         '" data-opt="' + t.id_optometra + '"><strong>' + t.hora + '</strong><br><small>' +
@@ -257,6 +265,8 @@
         if (b) seleccionar(b.dataset.hora, b.dataset.opt);
     });
     fecha.addEventListener('change', () => cargar(false));
+    // La duración depende del tipo de cita (terapia = 1 hora), así que se recalculan los turnos
+    tipo.addEventListener('change', () => cargar(false));
 
     // Si el formulario volvió con errores, se recargan los horarios de la fecha escogida
     if (fecha.value) cargar(true);

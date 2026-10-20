@@ -1,1 +1,7 @@
 *.sqlite*
+
+# Respaldos / volcados locales de la base de datos
+*.sql.gz
+*.sql.zip
+/backups
+/dumps

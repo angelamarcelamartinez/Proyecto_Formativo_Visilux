@@ -63,7 +63,7 @@
                             <div class="col-md-4">
                                 <label for="nit" class="form-label fw-medium">NIT</label>
                                 {{-- Máscara 800000000-9: se ve con puntos y guion, pero se guarda solo el número (8000000009) --}}
-                                <input type="text" id="nit" name="nit" value="{{ old('nit') }}" placeholder="800197268-4" class="{{ $campo('nit') }}" data-v="nit" required>
+                                <input type="text" id="nit" name="nit" value="{{ old('nit') }}" placeholder="Ej: 800197268-4" class="{{ $campo('nit') }}" data-v="nit" required>
                                 <span class="form-text">9 dígitos + dígito de verificación, como aparece en el RUT.</span>
                                 @error('nit') <span class="invalid-feedback d-block">{{ $message }}</span> @enderror
                             </div>

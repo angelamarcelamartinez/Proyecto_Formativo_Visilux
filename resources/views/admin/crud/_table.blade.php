@@ -33,6 +33,26 @@
                                             Ver más
                                         </button>
                                     @endif
+                                    @if ($table === 'mensajes_contacto')
+                                        {{-- Un clic: marcar como contactado / devolver a "Por contactar" --}}
+                                        @php $yaContactado = ($row->estado_contactenos ?? '') === 'Contactado'; @endphp
+                                        <form method="POST" action="{{ route('admin.contacto.estado', $rowId) }}">
+                                            @csrf
+                                            @if ($yaContactado)
+                                                <button type="submit" title="Volver a «Por contactar»"
+                                                        class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium text-amber-700 bg-amber-50 hover:bg-amber-100">
+                                                    @include('partials.icon', ['name' => 'clock', 'class' => 'w-4 h-4'])
+                                                    Pendiente
+                                                </button>
+                                            @else
+                                                <button type="submit" title="Marcar como contactado"
+                                                        class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium text-emerald-700 bg-emerald-50 hover:bg-emerald-100">
+                                                    @include('partials.icon', ['name' => 'check', 'class' => 'w-4 h-4'])
+                                                    Contactado
+                                                </button>
+                                            @endif
+                                        </form>
+                                    @endif
                                     @unless (\App\Support\Alcance::soloLectura($table))
                                     <a href="{{ route('admin.crud.edit', [$table, $rowId]) }}"
                                        class="p-2 rounded-lg text-olive-600 hover:bg-olive-100" title="Editar">
@@ -107,7 +127,7 @@
                                     No se encontraron registros con esa búsqueda o filtro.
                                 @else
                                     No hay registros todavía.
-                                    @unless (\App\Support\Alcance::soloLectura($table))
+                                    @unless (\App\Support\Alcance::soloLectura($table) || ! empty($config['sin_crear']))
                                     <a href="{{ route('admin.crud.create', $table) }}" class="text-olive-600 font-medium hover:underline">Crear el primero</a>.
                                     @endunless
                                 @endif

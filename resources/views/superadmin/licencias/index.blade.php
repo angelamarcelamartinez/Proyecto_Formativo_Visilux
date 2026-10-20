@@ -1,90 +1,107 @@
 @extends('layouts.superadmin')
 
-@section('title', 'Licencias y pagos')
-@section('breadcrumb', 'Licencias y pagos')
+@section('title', 'Licencias')
+@section('breadcrumb', 'Licencias')
 
 @section('content')
 
     @php
         $dinero = fn ($v) => '$' . number_format((float) $v, 0, ',', '.');
-        $campo = 'bg-creamdark/40 border border-olive-100 rounded-lg py-2 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-olive-300';
+        $filtrosLic = ['todas' => 'Todas', 'activa' => 'Activas', 'vencida' => 'Vencidas', 'cancelada' => 'Canceladas'];
+        $botonDescarga = 'inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg border border-olive-100 bg-white hover:bg-olive-50 text-olive-700 transition';
     @endphp
 
     <div class="mb-6">
-        <h1 class="font-serif text-2xl">Licencias y pagos</h1>
-        <p class="text-sm text-muted">Aprueba los planes que piden las ópticas y revisa el historial de licencias.</p>
+        <h1 class="font-serif text-2xl">Licencias</h1>
+        <p class="text-sm text-muted">Las ópticas que requieren atención y el historial de licencias de todas las ópticas. Los pagos por aprobar están en el Panel general.</p>
     </div>
 
-    {{-- Pendientes --}}
-    <div class="bg-white rounded-2xl border border-olive-100 shadow-card overflow-hidden mb-6">
-        <div class="px-5 sm:px-6 pt-5 pb-4 border-b border-olive-100 flex items-center gap-3">
-            <div class="w-9 h-9 rounded-xl bg-sky-50 text-sky-700 flex items-center justify-center">
-                @include('partials.icon', ['name' => 'receipt', 'class' => 'w-4.5 h-4.5'])
+    {{-- ============ Requieren atención ============ --}}
+    <div id="atencion" class="bg-white rounded-2xl border border-olive-100 shadow-card overflow-hidden mb-8 scroll-mt-24">
+        <div class="px-5 sm:px-6 pt-5 pb-4 border-b border-olive-100 flex items-center gap-3 flex-wrap">
+            <div class="w-9 h-9 rounded-xl bg-amber-50 text-amber-700 flex items-center justify-center">
+                @include('partials.icon', ['name' => 'clock', 'class' => 'w-4.5 h-4.5'])
             </div>
-            <div>
+            <div class="flex-1 min-w-[12rem]">
                 <h3 class="font-serif text-lg leading-tight flex items-center gap-2">
-                    Pagos por aprobar
-                    <span class="text-[11px] font-sans font-semibold bg-creamdark text-olive-700 rounded-full px-2 py-0.5 tabular-nums">{{ $pendientes->count() }}</span>
+                    Requieren atención
+                    <span class="text-[11px] font-sans font-semibold bg-creamdark text-olive-700 rounded-full px-2 py-0.5 tabular-nums">{{ $alertas->count() }}</span>
                 </h3>
-                <p class="text-xs text-muted">Al aprobar, el plan empieza hoy o cuando termine el que la óptica ya tiene.</p>
+                <p class="text-xs text-muted">Por vencer, vencidas o sin plan</p>
             </div>
+            <form method="POST" action="{{ route('superadmin.avisos') }}">
+                @csrf
+                <button type="submit" title="Envía el correo de vencimiento a las ópticas a las que les toca hoy"
+                        class="inline-flex items-center gap-1.5 text-sm font-semibold text-cream bg-olive-600 hover:bg-olive-700 rounded-xl px-4 py-2.5 shadow-card transition">
+                    @include('partials.icon', ['name' => 'mail', 'class' => 'w-4 h-4'])
+                    Enviar avisos
+                </button>
+            </form>
         </div>
 
-        @forelse ($pendientes as $lic)
-            <div class="px-5 sm:px-6 py-4 border-b border-olive-100 last:border-b-0 flex flex-col lg:flex-row lg:items-center gap-4">
-                <div class="lg:w-72 shrink-0">
-                    <a href="{{ route('superadmin.empresas.show', $lic->nit_empresa) }}" class="font-medium hover:text-olive-700">
-                        {{ $lic->empresa->nombre ?? $lic->nit_empresa }}
-                    </a>
-                    <p class="text-xs text-muted">
-                        {{ $lic->plan->nombre ?? 'Plan' }} · {{ $dinero($lic->valor) }} · pedida el {{ $lic->fecha_solicitud?->format('d/m/Y') }}
-                    </p>
-                    @if ($lic->empresa?->estaPendiente())
-                        <span class="inline-block mt-1 text-[10px] font-semibold uppercase text-sky-700 bg-sky-50 rounded px-1.5 py-0.5">Óptica nueva</span>
-                        <p class="text-[11px] text-muted mt-1">{{ $lic->observaciones }}</p>
-                        <p class="text-[11px] text-muted">Ref. {{ $lic->referencia_pago }}</p>
-                    @endif
-                </div>
-
-                <form method="POST" action="{{ route('superadmin.licencias.aprobar', $lic->id_licencia) }}" class="flex flex-wrap items-center gap-2 flex-1">
-                    @csrf
-                    @if ($lic->empresa?->estaPendiente())
-                        <p class="text-xs text-muted flex-1 min-w-[10rem]">
-                            Al aprobar se activa la óptica y se envía la contraseña a su administrador por correo.
-                        </p>
-                        <button type="submit" class="bg-olive-600 hover:bg-olive-700 transition text-cream text-sm font-medium px-4 py-2 rounded-lg">Aprobar y enviar acceso</button>
-                    @else
-                        <input type="text" name="referencia_pago" placeholder="Referencia del pago" class="{{ $campo }} flex-1 min-w-[10rem]">
-                        <input type="number" name="valor" min="0" step="1" value="{{ (int) $lic->valor }}" title="Valor recibido" class="{{ $campo }} w-32">
-                        <button type="submit" class="bg-olive-600 hover:bg-olive-700 transition text-cream text-sm font-medium px-4 py-2 rounded-lg">Aprobar pago</button>
-                    @endif
-                </form>
-
-                <form method="POST" action="{{ route('superadmin.licencias.rechazar', $lic->id_licencia) }}"
-                      onsubmit="return confirm('{{ $lic->empresa?->estaPendiente()
-                          ? '¿Rechazar el registro de ' . addslashes($lic->empresa->nombre) . '? Se borrarán la óptica y su administrador.'
-                          : '¿Rechazar la solicitud de ' . addslashes($lic->empresa->nombre ?? '') . '?' }}')">
-                    @csrf
-                    <button type="submit" class="text-sm font-medium text-rose-600 hover:text-rose-800 px-2 py-2">Rechazar</button>
-                </form>
+        @if ($alertas->isEmpty())
+            <div class="px-6 py-10 text-center text-sm text-muted">Todas las ópticas están al día.</div>
+        @else
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead>
+                        <tr class="bg-cream text-left text-[11px] uppercase tracking-wider text-muted">
+                            <th class="py-3 pl-6 pr-4 font-semibold">Óptica</th>
+                            <th class="py-3 pr-4 font-semibold">Correo</th>
+                            <th class="py-3 pr-4 font-semibold">Plan</th>
+                            <th class="py-3 pr-4 font-semibold">Vence</th>
+                            <th class="py-3 pr-4 font-semibold">Días</th>
+                            <th class="py-3 pr-6 font-semibold">Estado</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-olive-100">
+                        @foreach ($alertas as $o)
+                            <tr class="hover:bg-cream/70 transition">
+                                <td class="py-3 pl-6 pr-4 whitespace-nowrap">
+                                    <a href="{{ route('superadmin.empresas.show', $o->nit) }}" class="font-medium hover:text-olive-700">{{ $o->empresa }}</a>
+                                    <p class="text-[11px] text-muted">NIT {{ $o->nit }}</p>
+                                </td>
+                                <td class="py-3 pr-4 text-ink/70 whitespace-nowrap">{{ $o->email }}</td>
+                                <td class="py-3 pr-4 whitespace-nowrap">{{ $o->plan ?? 'Sin plan' }}</td>
+                                <td class="py-3 pr-4 whitespace-nowrap text-ink/70 tabular-nums">{{ $o->fecha_fin ? \Illuminate\Support\Carbon::parse($o->fecha_fin)->format('d/m/Y') : '—' }}</td>
+                                <td class="py-3 pr-4">@include('partials.estado-licencia', ['dias' => $o->dias_restantes !== null ? (int) $o->dias_restantes : null, 'solo' => 'dias'])</td>
+                                <td class="py-3 pr-6">@include('partials.estado-licencia', ['estado' => $o->estado_licencia, 'solo' => 'estado'])</td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
             </div>
-        @empty
-            <div class="px-6 py-10 text-center text-sm text-muted">No hay pagos por aprobar.</div>
-        @endforelse
+        @endif
     </div>
 
-    {{-- Historial --}}
-    <div class="bg-white rounded-2xl border border-olive-100 shadow-card overflow-hidden">
+    {{-- ============ Historial de licencias ============ --}}
+    <div id="historial" class="bg-white rounded-2xl border border-olive-100 shadow-card overflow-hidden scroll-mt-24">
         <div class="px-5 sm:px-6 py-4 flex items-center justify-between flex-wrap gap-3 border-b border-olive-100">
-            <h3 class="font-serif text-lg">Historial de licencias</h3>
-            <div class="flex items-center gap-1 bg-creamdark/70 rounded-full p-1">
-                @foreach (['todas' => 'Todas', 'activa' => 'Activas', 'vencida' => 'Vencidas', 'cancelada' => 'Canceladas'] as $key => $label)
-                    <a href="{{ route('superadmin.licencias.index', ['estado' => $key]) }}"
-                       class="px-3.5 py-1.5 rounded-full text-xs font-medium transition
-                              {{ $estado === $key ? 'bg-white text-olive-700 shadow-sm ring-1 ring-olive-100' : 'text-ink/60 hover:text-ink' }}">
-                        {{ $label }}
+            <div>
+                <h3 class="font-serif text-lg">Historial de licencias</h3>
+                <p class="text-xs text-muted">Pruebas, compras y renovaciones de todas las ópticas</p>
+            </div>
+            <div class="flex items-center gap-3 flex-wrap">
+                <div class="flex items-center gap-1 bg-creamdark/70 rounded-full p-1 overflow-x-auto">
+                    @foreach ($filtrosLic as $key => $label)
+                        <a href="{{ route('superadmin.licencias.index', array_filter(['lic' => $key !== 'todas' ? $key : null])) }}#historial"
+                           class="shrink-0 px-3.5 py-1.5 rounded-full text-xs font-medium transition whitespace-nowrap
+                                  {{ $estadoLic === $key ? 'bg-white text-olive-700 shadow-sm ring-1 ring-olive-100' : 'text-ink/60 hover:text-ink' }}">
+                            {{ $label }}
+                        </a>
+                    @endforeach
+                </div>
+                {{-- Se descarga lo que muestra el filtro elegido --}}
+                <div class="flex items-center gap-2">
+                    <a href="{{ route('superadmin.reportes.descargar', array_filter(['reporte' => 'licencias', 'formato' => 'excel', 'lic' => $estadoLic !== 'todas' ? $estadoLic : null])) }}" class="{{ $botonDescarga }}">
+                        @include('partials.icon', ['name' => 'download', 'class' => 'w-3.5 h-3.5'])
+                        Excel
                     </a>
-                @endforeach
+                    <a href="{{ route('superadmin.reportes.descargar', array_filter(['reporte' => 'licencias', 'formato' => 'pdf', 'lic' => $estadoLic !== 'todas' ? $estadoLic : null])) }}" class="{{ $botonDescarga }}">
+                        @include('partials.icon', ['name' => 'download', 'class' => 'w-3.5 h-3.5'])
+                        PDF
+                    </a>
+                </div>
             </div>
         </div>
 

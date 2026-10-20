@@ -71,4 +71,36 @@ class ProductoController extends Controller
             'pageTitle' => 'Productos',
         ]);
     }
+
+    /**
+     * Catálogo infantil: solo productos de la categoría "Pediátrica" (id 4).
+     */
+    public function ninos(Request $request)
+    {
+        $query = Producto::activos()->with(['marca', 'categoriaProducto'])
+            ->where(function ($q) {
+                // Categoría Pediátrica, o nombre que indique que es infantil
+                $q->where('id_categoria', 4)
+                  ->orWhere('nombre_producto', 'like', '%niño%')
+                  ->orWhere('nombre_producto', 'like', '%niña%')
+                  ->orWhere('nombre_producto', 'like', '%infantil%')
+                  ->orWhere('nombre_producto', 'like', '%kids%');
+            });
+
+        if ($buscar = trim((string) $request->get('buscar', ''))) {
+            $query->where('nombre_producto', 'like', "%{$buscar}%");
+        }
+
+        switch ($request->get('orden')) {
+            case 'precio_asc':  $query->orderBy('precio', 'asc'); break;
+            case 'precio_desc': $query->orderBy('precio', 'desc'); break;
+            default:            $query->orderByDesc('id_producto');
+        }
+
+        return view('productos.ninos', [
+            'productos' => $query->paginate(8)->withQueryString(),
+            'filtros' => $request->only(['buscar', 'orden']),
+            'pageTitle' => 'Gafas para niños',
+        ]);
+    }
 }

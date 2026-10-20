@@ -51,18 +51,14 @@ class EmpresaController extends Controller
             $opticas = $opticas->where('estado_licencia', $estado)->values();
         }
 
-        // Historial de licencias de todas las ópticas (los pagos por aprobar están en el Panel general)
-        $estadoLic = in_array($request->get('lic'), ['activa', 'vencida', 'cancelada'], true) ? $request->get('lic') : 'todas';
+        // Administradores de cada óptica (nombre, usuario para entrar y si ya cambió la contraseña temporal)
+        $admins = Usuario::whereIn('nit_empresa', $opticas->pluck('nit'))
+            ->where('id_rol', config('visioptica.rol_admin'))
+            ->orderBy('nombres')
+            ->get(['documento', 'nombres', 'apellido', 'email', 'id_estado', 'nit_empresa', 'ultimo_acceso'])
+            ->groupBy('nit_empresa');
 
-        $historial = Licencia::with(['empresa', 'plan'])
-            ->where('estado', '<>', 'pendiente')
-            ->when($estadoLic !== 'todas', fn ($q2) => $q2->where('estado', $estadoLic))
-            ->orderByDesc('fecha_solicitud')
-            ->paginate(10, ['*'], 'hist')
-            ->withQueryString()
-            ->fragment('historial');
-
-        return view('superadmin.empresas.index', compact('opticas', 'estado', 'q', 'conteos', 'historial', 'estadoLic'));
+        return view('superadmin.empresas.index', compact('opticas', 'estado', 'q', 'conteos', 'admins'));
     }
 
     /**
@@ -123,124 +119,195 @@ class EmpresaController extends Controller
         ));
     }
 
-    public function create(): View
-    {
-        return view('superadmin.empresas.form', [
-            'empresa' => new Empresa(),
-            'modo' => 'crear',
-        ]);
-    }
-
-    /**
-     * Registra una óptica nueva con su administrador y el mes de prueba gratis.
-     */
-    public function store(Request $request): RedirectResponse
-    {
-        // El NIT se guarda como número: sin puntos ni guion (800000000-9 → 8000000009).
-        $request->merge(['nit' => \App\Support\Nit::normalizar($request->input('nit'))]);
-
-        $data = $request->validate(array_merge($this->reglasEmpresa(), [
-            'nit' => array_merge(\App\Support\Nit::reglas(), ['unique:empresa,nit']),
-            'admin_documento' => ['required', 'integer', 'min:1', 'unique:usuario,documento'],
-            'admin_nombres' => ['required', 'string', 'max:100'],
-            'admin_apellido' => ['nullable', 'string', 'max:100'],
-            'admin_email' => ['required', 'email', 'max:100', 'unique:usuario,email'],
-            'admin_telefono' => ['required', 'string', 'max:20', 'unique:usuario,telefono'],
-            'admin_password' => ['required', 'string', 'min:8'],
-            // Certificado de la Cámara de Comercio + confirmación de la ventana emergente
-            'camara_comercio' => CamaraComercio::reglas(),
-            'confirmo' => ['accepted'],
-        ]), $this->mensajesVerificacion(), $this->nombresCampos());
-
-        $rutaCamara = CamaraComercio::guardar($request->file('camara_comercio'), $data['nit']);
-
-        try {
-        $empresa = DB::transaction(function () use ($data, $rutaCamara) {
-            $empresa = Empresa::create([
-                'nit' => $data['nit'],
-                'nombre' => $data['nombre'],
-                'slug' => Empresa::slugDisponible(($data['slug'] ?? null) ?: $data['nombre']),
-                'email' => $data['email'],
-                'telefono' => $data['telefono'] ?? null,
-                'direccion' => $data['direccion'] ?? null,
-                'ciudad' => $data['ciudad'] ?? null,
-                'estado' => 'activa',
-                'prueba_usada' => 0,
-                'fecha_registro' => now(),
-                'camara_comercio' => $rutaCamara,
-            ]);
-
-            Usuario::create([
-                'documento' => $data['admin_documento'],
-                'nombres' => $data['admin_nombres'],
-                'apellido' => $data['admin_apellido'] ?? '',
-                'telefono' => $data['admin_telefono'],
-                'email' => $data['admin_email'],
-                'password' => Hash::make($data['admin_password']),
-                'fecha_creacion' => now(),
-                'id_rol' => config('visioptica.rol_admin'),
-                'id_tipo_docu' => 1,
-                'id_estado' => 1,
-                'nit_empresa' => $empresa->nit,
-            ]);
-
-            $prueba = Plan::where('es_prueba', 1)->where('activo', 1)->first();
-            if ($prueba) {
-                Licencias::asignar($empresa, $prueba, 'PRUEBA', 0, 'Mes de prueba al registrar la óptica');
-            }
-
-            PaginaEmpresa::deEmpresa($empresa);
-
-            Actividad::registrar($empresa->nit, 'crear', "Óptica {$empresa->nombre} registrada y NIT verificado con la Cámara de Comercio", 'empresa', $empresa->nit);
-
-            return $empresa;
-        });
-        } catch (\Throwable $e) {
-            CamaraComercio::borrar($rutaCamara);
-            throw $e;
-        }
-
-        return redirect()->route('superadmin.empresas.show', $empresa->nit)
-            ->with('success', "La óptica {$empresa->nombre} quedó registrada con 1 mes de prueba.");
-    }
-
     public function edit(string $nit): View
     {
         return view('superadmin.empresas.form', [
             'empresa' => Empresa::findOrFail($nit),
-            'modo' => 'editar',
         ]);
     }
 
     public function update(Request $request, string $nit): RedirectResponse
     {
         $empresa = Empresa::findOrFail($nit);
+        $pendiente = $empresa->estaPendiente();
 
-        // Modificar una óptica obliga a verificar su NIT otra vez: PDF nuevo + confirmación.
-        $data = $request->validate(array_merge($this->reglasEmpresa($empresa), [
-            'camara_comercio' => CamaraComercio::reglas(),
-            'confirmo' => ['accepted'],
-        ]), $this->mensajesVerificacion(), $this->nombresCampos());
+        // El NIT se guarda como número: sin puntos ni guion (800000000-9 → 8000000009).
+        $request->merge(['nit' => \App\Support\Nit::normalizar($request->input('nit'))]);
+
+        $reglas = $this->reglasEmpresa($empresa);
+
+        // Todos los campos se pueden editar, incluido el NIT (se cambia en cascada en todas las tablas).
+        $reglas['nit'] = array_merge(\App\Support\Nit::reglas(), [Rule::unique('empresa', 'nit')->ignore($empresa->nit, 'nit')]);
+
+        if ($pendiente) {
+            // Óptica nueva que aún no se aprueba: el PDF solo hace falta si no tiene uno; la verificación
+            // con la Cámara de Comercio se confirma al aprobar (ventana «Verificar NIT y aprobar»).
+            $reglas['camara_comercio'] = CamaraComercio::reglas(! $empresa->tieneCamara());
+        } else {
+            // Modificar una óptica ya activa obliga a verificar su NIT otra vez: PDF nuevo + confirmación.
+            $reglas['camara_comercio'] = CamaraComercio::reglas();
+            $reglas['confirmo'] = ['accepted'];
+        }
+
+        $data = $request->validate($reglas, $this->mensajesVerificacion(), $this->nombresCampos());
+
+        $nuevoNit = (string) \App\Support\Nit::normalizar($data['nit']);
+        $cambioNit = $nuevoNit !== (string) $empresa->nit;
 
         $anterior = $empresa->camara_comercio;
-        $rutaCamara = CamaraComercio::guardar($request->file('camara_comercio'), $empresa->nit);
+        $rutaCamara = $request->hasFile('camara_comercio')
+            ? CamaraComercio::guardar($request->file('camara_comercio'), $nuevoNit)
+            : null;
 
-        $empresa->update([
-            'camara_comercio' => $rutaCamara,
-            'nombre' => $data['nombre'],
-            'slug' => Empresa::slugDisponible(($data['slug'] ?? null) ?: $data['nombre'], $empresa->nit),
-            'email' => $data['email'],
-            'telefono' => $data['telefono'] ?? null,
-            'direccion' => $data['direccion'] ?? null,
-            'ciudad' => $data['ciudad'] ?? null,
-        ]);
+        try {
+            DB::transaction(function () use ($empresa, $data, $nuevoNit, $cambioNit, $rutaCamara) {
+                if ($cambioNit) {
+                    $this->cambiarNit($empresa->nit, $nuevoNit);
+                    $empresa = Empresa::findOrFail($nuevoNit);
+                }
 
-        CamaraComercio::borrar($anterior);
+                $empresa->update(array_filter([
+                    'camara_comercio' => $rutaCamara,
+                ]) + [
+                    'nombre' => $data['nombre'],
+                    'slug' => Empresa::slugDisponible(($data['slug'] ?? null) ?: $data['nombre'], $empresa->nit),
+                    'email' => $data['email'],
+                    'telefono' => $data['telefono'] ?? null,
+                    'direccion' => $data['direccion'] ?? null,
+                    'ciudad' => $data['ciudad'] ?? null,
+                ]);
+            });
+        } catch (\Throwable $e) {
+            CamaraComercio::borrar($rutaCamara);
+            throw $e;
+        }
 
-        Actividad::registrar($empresa->nit, 'editar', 'Datos de la óptica actualizados y NIT verificado con la Cámara de Comercio', 'empresa', $empresa->nit);
+        if ($rutaCamara) {
+            CamaraComercio::borrar($anterior);
+        }
 
-        return redirect()->route('superadmin.empresas.show', $empresa->nit)
+        Actividad::registrar($nuevoNit, 'editar',
+            $pendiente
+                ? 'Datos de la óptica corregidos antes de aprobar' . ($cambioNit ? " (NIT {$nit} → {$nuevoNit})" : '')
+                : 'Datos de la óptica actualizados y NIT verificado con la Cámara de Comercio' . ($cambioNit ? " (NIT {$nit} → {$nuevoNit})" : ''),
+            'empresa', $nuevoNit);
+
+        if ($pendiente) {
+            return redirect()->route('superadmin.dashboard')
+                ->with('success', 'Datos de la óptica guardados' . ($cambioNit ? " (NIT corregido a {$nuevoNit})" : '') . '. Ya puedes verificar el NIT y aprobar.');
+        }
+
+        return redirect()->route('superadmin.empresas.show', $nuevoNit)
             ->with('success', 'Datos de la óptica actualizados y NIT verificado.');
+    }
+
+    /**
+     * Cambia el NIT de una óptica en todas las tablas que lo usan. La licencia, la página y la actividad
+     * lo siguen solas (ON UPDATE CASCADE); el resto (usuarios, etc.) se actualiza aquí.
+     */
+    protected function cambiarNit(string $viejo, string $nuevo): void
+    {
+        DB::table('empresa')->where('nit', $viejo)->update(['nit' => $nuevo]);
+
+        $tablas = DB::table('information_schema.columns as c')
+            ->join('information_schema.tables as t', fn ($j) => $j->on('t.table_schema', '=', 'c.table_schema')->on('t.table_name', '=', 'c.table_name'))
+            ->where('c.table_schema', DB::getDatabaseName())
+            ->where('c.column_name', 'nit_empresa')
+            ->where('t.table_type', 'BASE TABLE')
+            ->pluck('c.table_name');
+
+        foreach ($tablas as $tabla) {
+            DB::table($tabla)->where('nit_empresa', $viejo)->update(['nit_empresa' => $nuevo]);
+        }
+    }
+
+    // ------------------------------------------------- administradores de la óptica
+
+    /** Administradores de una óptica, con el botón para editar a cada uno. */
+    public function administradores(string $nit): View
+    {
+        $empresa = Empresa::findOrFail($nit);
+
+        $admins = Usuario::where('nit_empresa', $nit)
+            ->where('id_rol', config('visioptica.rol_admin'))
+            ->orderBy('nombres')
+            ->get();
+
+        return view('superadmin.empresas.administradores', compact('empresa', 'admins'));
+    }
+
+    public function editarAdmin(string $nit, int $documento): View
+    {
+        return view('superadmin.empresas.administrador-form', [
+            'empresa' => Empresa::findOrFail($nit),
+            'admin' => $this->adminDe($nit, $documento),
+        ]);
+    }
+
+    public function actualizarAdmin(Request $request, string $nit, int $documento): RedirectResponse
+    {
+        $empresa = Empresa::findOrFail($nit);
+        $admin = $this->adminDe($nit, $documento);
+
+        $data = $request->validate([
+            'nombres' => ['required', 'string', 'max:100'],
+            'apellido' => ['nullable', 'string', 'max:100'],
+            'telefono' => ['required', 'string', 'max:20', Rule::unique('usuario', 'telefono')->ignore($admin->documento, 'documento')],
+            'email' => ['required', 'email', 'max:100', Rule::unique('usuario', 'email')->ignore($admin->documento, 'documento')],
+            'password' => ['nullable', 'string', 'min:8'],
+            'activo' => ['nullable', 'boolean'],
+        ], [], ['nombres' => 'nombres', 'apellido' => 'apellidos', 'telefono' => 'celular', 'email' => 'correo', 'password' => 'contraseña']);
+
+        $cambios = [
+            'nombres' => $data['nombres'],
+            'apellido' => $data['apellido'] ?? '',
+            'telefono' => $data['telefono'],
+            'email' => $data['email'],
+        ];
+
+        $conClave = ! empty($data['password']);
+        if ($conClave) {
+            $cambios['password'] = Hash::make($data['password']);
+            // Una contraseña puesta por el superadmin se cambia en el próximo ingreso (estado «Pendiente»)
+            if ($request->boolean('forzar_cambio') && in_array((int) $admin->id_estado, [1, 3], true)) {
+                $cambios['id_estado'] = 3;
+            }
+        }
+
+        // El superadmin activa o desactiva al administrador (uno inactivo no puede entrar).
+        $activar = $request->boolean('activo');
+        $estabaInactivo = \App\Support\BloqueoUsuarios::estaInactivo($admin) || (int) $admin->id_estado === 4;
+        $cambioEstado = null;
+        if ($activar && $estabaInactivo) {
+            $cambioEstado = 'activar';
+        } elseif (! $activar && ! $estabaInactivo) {
+            $cambioEstado = 'inactivar';
+        }
+
+        $admin->update($cambios);
+
+        if ($cambioEstado === 'activar') {
+            $admin = $admin->fresh();
+            \App\Support\BloqueoUsuarios::activar($admin, 'Administrador activado por VisiOptica');
+        } elseif ($cambioEstado === 'inactivar') {
+            \App\Support\BloqueoUsuarios::inactivar($admin->fresh(), 'Administrador desactivado por VisiOptica');
+        }
+
+        Actividad::registrar($empresa->nit, 'editar',
+            "Administrador {$admin->nombres} actualizado por el superadmin" . ($conClave ? ' (nueva contraseña)' : '')
+            . ($cambioEstado === 'inactivar' ? ' (desactivado)' : ''),
+            'usuario', $admin->documento);
+
+        return redirect()->route('superadmin.empresas.admins', $empresa->nit)
+            ->with('success', 'Administrador actualizado' . ($conClave ? ' y contraseña cambiada.' : '.'));
+    }
+
+    protected function adminDe(string $nit, int $documento): Usuario
+    {
+        return Usuario::where('nit_empresa', $nit)
+            ->where('id_rol', config('visioptica.rol_admin'))
+            ->where('documento', $documento)
+            ->firstOrFail();
     }
 
     /**
@@ -296,6 +363,36 @@ class EmpresaController extends Controller
      * el administrador quedó inactivo por intentos fallidos y no hay nadie más
      * en su óptica que pueda activarlo.
      */
+    /**
+     * Botón «Reenviar credenciales»: genera una contraseña temporal nueva para el administrador
+     * y la envía al correo de la óptica y al del administrador.
+     */
+    public function reenviarCredenciales(string $nit, string $documento): RedirectResponse
+    {
+        $empresa = Empresa::findOrFail($nit);
+        $admin = Usuario::where('nit_empresa', $nit)
+            ->where('id_rol', config('visioptica.rol_admin'))
+            ->where('documento', $documento)
+            ->firstOrFail();
+
+        if ($empresa->estaPendiente()) {
+            return back()->withErrors(['general' => "{$empresa->nombre} todavía está pendiente: las credenciales se envían al aprobar el pago."]);
+        }
+
+        $licencia = $empresa->licencias()->orderByDesc('id_licencia')->first();
+        if (! $licencia) {
+            return back()->withErrors(['general' => "{$empresa->nombre} no tiene licencia: asígnale una antes de enviar credenciales."]);
+        }
+
+        $r = \App\Support\RegistroOptica::reenviarCredenciales($empresa, $admin, $licencia);
+
+        if ($r['enviado']) {
+            return back()->with('success', "Credenciales enviadas a {$r['correo']}. El administrador entra con {$r['usuario']} y debe cambiar la contraseña temporal.");
+        }
+
+        return back()->with('success', "No se pudo enviar a: {$r['error']}. (Si había dos correos, el otro sí lo recibió.) Entrégale estos datos al administrador: usuario {$r['usuario']}, contraseña temporal {$r['password']}");
+    }
+
     public function cambiarEstadoUsuario(string $nit, string $documento): RedirectResponse
     {
         $usuario = Usuario::where('nit_empresa', $nit)->where('documento', $documento)->firstOrFail();

@@ -12,7 +12,7 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
     
     <!-- Tus estilos personalizados -->
-    <link href="{{ asset('assets/css/style.css') }}" rel="stylesheet">
+    <link href="{{ asset('assets/css/style.css') }}?v={{ @filemtime(public_path('assets/css/style.css')) ?: '20261014' }}" rel="stylesheet">
 </head>
 <body class="login-page">
 
@@ -35,6 +35,29 @@
                 <!-- FORMULARIO DE REGISTRO -->
                 <form method="POST" action="{{ route('register') }}" novalidate data-validar>
                     @csrf
+
+                    <!-- CAMPO ÓPTICA -->
+                    <div class="mb-3">
+                        <label for="nit_empresa" class="form-label fw-medium">Óptica</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-light border-end-0">
+                                <i class="bi bi-shop text-muted"></i>
+                            </span>
+                            <select class="form-select border-start-0 login-input @error('nit_empresa') is-invalid @enderror"
+                                    id="nit_empresa" name="nit_empresa" required>
+                                @php $opticas = \App\Models\Empresa::where('estado', 'activa')->orderBy('nombre')->get(['nit', 'nombre', 'ciudad']); @endphp
+                                <option value="" disabled {{ old('nit_empresa', session('optica_nit')) ? '' : 'selected' }}>Selecciona tu óptica</option>
+                                @foreach ($opticas as $o)
+                                    <option value="{{ $o->nit }}" @selected((string) old('nit_empresa', session('optica_nit')) === (string) $o->nit)>{{ $o->nombre }}@if ($o->ciudad) — {{ $o->ciudad }}@endif</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        @error('nit_empresa')
+                            <span class="invalid-feedback d-block" role="alert">
+                                <strong>{{ $message }}</strong>
+                            </span>
+                        @enderror
+                    </div>
 
                     <!-- CAMPO DOCUMENTO -->
                     <!-- CAMPO TIPO DE DOCUMENTO -->

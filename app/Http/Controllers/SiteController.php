@@ -20,8 +20,8 @@ class SiteController extends Controller
      */
     public function inicio()
     {
-        $empresa = Empresa::find(config('visioptica.empresa_principal'));
-        abort_unless($empresa, 404);
+        $empresa = Empresa::principal();
+        abort_unless($empresa, 404, 'No hay ninguna óptica registrada. Ejecuta los scripts SQL de database/sql y vuelve a intentar.');
 
         return $this->mostrarPagina($empresa);
     }
@@ -86,10 +86,9 @@ class SiteController extends Controller
     /**
      * Procesa el formulario de contacto de la vista "Conócenos".
      *
-     * Por ahora el mensaje solo se confirma en pantalla (no se persiste
-     * en base de datos porque no existe una tabla para ello). Si más
-     * adelante quieres guardarlo o enviarlo por correo, aquí es donde
-     * se agregaría esa lógica (Mail::to(...)->send(...) o un insert).
+     * El mensaje se guarda en la tabla `mensajes_contacto` con el NIT de la
+     * óptica que se estaba viendo, y aparece en el panel del administrador
+     * en "Por contactar" (CRUD genérico, config/admin_tables.php).
      */
     public function enviarContacto(Request $request)
     {
@@ -99,6 +98,31 @@ class SiteController extends Controller
             'telefono' => ['nullable', 'string', 'max:20'],
             'mensaje' => ['required', 'string', 'max:2000'],
         ]);
+
+        // Se guarda a nombre de la óptica cuya página estaba viendo el visitante
+        // (la recuerda mostrarPagina() en la sesión). El administrador de esa óptica
+        // lo ve en su panel, en "Por contactar".
+        if (Schema::hasTable('mensajes_contacto')) {
+            $mensaje = [
+                'nombre_contactenos' => $request->input('nombre'),
+                'correo_contactenos' => $request->input('correo'),
+                'telefono_contactenos' => $request->input('telefono'),
+                'mensaje_contactenos' => $request->input('mensaje'),
+            ];
+
+            // Columnas del script database/sql/2026_10_19_mensajes_contacto.sql (si ya se ejecutó)
+            if (Schema::hasColumn('mensajes_contacto', 'nit_empresa')) {
+                $mensaje['nit_empresa'] = session('optica_nit', config('visioptica.empresa_principal'));
+            }
+            if (Schema::hasColumn('mensajes_contacto', 'estado_contactenos')) {
+                $mensaje['estado_contactenos'] = 'Por contactar';
+            }
+            if (Schema::hasColumn('mensajes_contacto', 'fecha_contactenos')) {
+                $mensaje['fecha_contactenos'] = now();
+            }
+
+            DB::table('mensajes_contacto')->insert($mensaje);
+        }
 
         return back()->with('contacto_enviado', true);
     }
@@ -149,13 +173,17 @@ class SiteController extends Controller
      */
     public function horariosDisponibles(Request $request): JsonResponse
     {
-        $request->validate(['fecha' => ['required', 'date_format:Y-m-d']]);
+        $request->validate([
+            'fecha' => ['required', 'date_format:Y-m-d'],
+            'id_tipo_cita' => ['nullable', 'integer'],
+        ]);
 
         $fecha = Carbon::createFromFormat('Y-m-d', $request->fecha)->startOfDay();
 
         return response()->json([
             'dia' => AgendaCitas::nombreDia($fecha),
-            'turnos' => AgendaCitas::turnosLibres($fecha),
+            'turnos' => AgendaCitas::turnosLibres($fecha, $request->filled('id_tipo_cita') ? (int) $request->id_tipo_cita : null),
+            'minutos' => AgendaCitas::minutosDelTipo($request->filled('id_tipo_cita') ? (int) $request->id_tipo_cita : null),
         ]);
     }
 
@@ -229,7 +257,7 @@ class SiteController extends Controller
                     ->lockForUpdate()
                     ->get();
 
-                if (! AgendaCitas::turnoDisponible($fecha, $data['hora'], (int) $data['id_optometra'])) {
+                if (! AgendaCitas::turnoDisponible($fecha, $data['hora'], (int) $data['id_optometra'], (int) $data['id_tipo_cita'])) {
                     return false;
                 }
 
@@ -301,7 +329,7 @@ class SiteController extends Controller
         $guardada = DB::transaction(function () use ($registro, $fecha, $data) {
             DB::table('usuarios_no_registrados')->lockForUpdate()->whereDate('fecha_registro', now()->toDateString())->get(['id_usuario_nr']);
 
-            if (! AgendaCitas::turnoDisponible($fecha, $data['hora'], (int) $data['id_optometra'])) {
+            if (! AgendaCitas::turnoDisponible($fecha, $data['hora'], (int) $data['id_optometra'], (int) $data['id_tipo_cita'])) {
                 return false;
             }
 

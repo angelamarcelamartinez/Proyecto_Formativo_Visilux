@@ -6,6 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Models\Usuario;
 use Illuminate\Foundation\Auth\RegistersUsers;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\Validator;
 
 class RegisterController extends Controller
@@ -48,6 +50,8 @@ class RegisterController extends Controller
     protected function validator(array $data)
     {
         return Validator::make($data, [
+            // Óptica a la que pertenece el usuario (solo ópticas activas)
+            'nit_empresa' => ['required', 'string', Rule::exists('empresa', 'nit')->where('estado', 'activa')],
             'id_tipo_docu' => ['required', 'integer', 'exists:tipo_documento,id_tipo_docu'],
             'documento' => ['required', 'integer', 'unique:usuario,documento'],
             'nombres' => ['required', 'string', 'max:255'],
@@ -59,6 +63,8 @@ class RegisterController extends Controller
             // sin pasar por ahí (por ejemplo, a mano), el servidor lo rechaza.
             'acepto_terminos' => ['required', 'accepted'],
         ], [
+            'nit_empresa.required' => 'Selecciona la óptica a la que perteneces.',
+            'nit_empresa.exists' => 'La óptica seleccionada no está disponible.',
             'acepto_terminos.required' => 'Debes aceptar los Términos y Condiciones para registrarte.',
             'acepto_terminos.accepted' => 'Debes aceptar los Términos y Condiciones para registrarte.',
         ]);
@@ -71,7 +77,7 @@ class RegisterController extends Controller
      */
     protected function create(array $data)
     {
-        return Usuario::create([
+        $campos = [
             'documento' => $data['documento'],
             'nombres' => $data['nombres'],
             'apellido' => $data['apellido'],
@@ -82,6 +88,13 @@ class RegisterController extends Controller
             'id_rol' => 2, // Cliente
             'id_tipo_docu' => $data['id_tipo_docu'] ?? 1,
             'id_estado' => 1, // Activo
-        ]);
+        ];
+
+        // Óptica elegida en el registro: separa los datos de cada óptica por nit_empresa
+        if (Schema::hasColumn('usuario', 'nit_empresa')) {
+            $campos['nit_empresa'] = $data['nit_empresa'];
+        }
+
+        return Usuario::create($campos);
     }
 }

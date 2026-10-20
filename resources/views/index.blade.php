@@ -161,14 +161,23 @@
             =========================================== -->
             <div class="col-lg-6">
 
-                <div class="card service-card border-0 shadow-sm h-100">
+                <div class="card service-card service-card-kids border-0 h-100">
+
+                    <span class="sk-deco sk-d1">☁️</span>
+                    <span class="sk-deco sk-d2">⭐</span>
+                    <span class="sk-deco sk-d3">🌈</span>
+                    <span class="sk-deco sk-d4">🎈</span>
+                    <span class="sk-deco sk-d5">💖</span>
+                    <span class="sk-sticker">¡Para peques! 🧒</span>
 
                     <!-- Imagen del servicio con helper asset() -->
-                    <img src="{{ $pagina->imagen('serv1_imagen') }}"
-                         class="card-img-top service-img"
-                         alt="{{ $pagina->serv1_titulo }}">
+                    <div class="sk-photo">
+                        <img src="{{ $pagina->imagen('serv1_imagen') }}"
+                             class="service-img"
+                             alt="{{ $pagina->serv1_titulo }}">
+                    </div>
 
-                    <div class="card-body p-4">
+                    <div class="card-body p-4 sk-body">
 
                         <!-- Icono -->
                         <div class="service-icon mb-3">
@@ -176,21 +185,25 @@
                         </div>
 
                         <!-- Título -->
-                        <h3 class="h4 fw-bold text-heading">
+                        <h3 class="h3 fw-bold">
                             {{ $pagina->serv1_titulo }}
                         </h3>
 
                         <!-- Descripción -->
-                        <p class="text-muted">
+                        <p>
                             {{ $pagina->serv1_texto }}
                         </p>
 
                         <!-- Beneficios -->
-                        <ul class="service-list list-unstyled">
+                        <ul class="sk-chips list-unstyled">
                             @foreach ($pagina->lineas('serv1_items') as $item)
-                                <li>{{ $item }}</li>
+                                <li class="c{{ ($loop->index % 3) + 1 }}">{{ $item }}</li>
                             @endforeach
                         </ul>
+
+                        <a href="{{ route('productos.ninos') }}" class="btn-kids-link">
+                            <i class="bi bi-emoji-smile-fill"></i> Ver gafas para niños
+                        </a>
 
                     </div>
 
