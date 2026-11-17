@@ -4,6 +4,7 @@
      BANNER DE LA PÁGINA
 ====================================================== -->
 <section class="page-header">
+    <span class="ph-ring r1"></span><span class="ph-ring r2"></span><span class="ph-ring r3"></span>
     <div class="container text-center">
         <span class="page-eyebrow d-block mb-2">Reserva en línea</span>
         <h1 class="page-title display-5 mb-3">Agenda tu Cita</h1>
@@ -11,6 +12,11 @@
             Escoge el día y la hora que mejor te queden entre los horarios disponibles
             de nuestros optómetras.
         </p>
+        <div class="ph-chips">
+            <span class="ph-chip"><i class="bi bi-calendar-check"></i> Elige tu día</span>
+            <span class="ph-chip"><i class="bi bi-clock"></i> Elige tu hora</span>
+            <span class="ph-chip"><i class="bi bi-eyeglasses"></i> Con optómetra</span>
+        </div>
     </div>
 </section>
 
