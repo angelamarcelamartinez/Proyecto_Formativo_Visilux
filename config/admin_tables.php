@@ -47,6 +47,30 @@ return [
     ],
 ],
 
+    // Estados que se pueden elegir (formulario y filtro "Estado") en cada tabla.
+    // Así en Usuarios o Productos no aparecen "Enviado", "Agotado" o "Entregado".
+    // Una tabla que no esté aquí muestra todos los estados.
+    'estados_por_tabla' => [
+        'usuario' => ['Activo', 'Inactivo', 'Pendiente'],
+        'optometra' => ['Activo', 'Inactivo'],
+        'usuarios_no_registrados' => ['Pendiente', 'Completado', 'Cancelado'],
+        'asignacion_cita' => ['Pendiente', 'En proceso', 'Completado', 'Cancelado'],
+        'categoria_producto' => ['Activo', 'Inactivo'],
+        'marca' => ['Activo', 'Inactivo'],
+        'modelo' => ['Activo', 'Inactivo'],
+        'talla' => ['Activo', 'Inactivo'],
+        'tipo_producto' => ['Activo', 'Inactivo'],
+        'producto' => ['Activo', 'Inactivo', 'Agotado'],
+        'lote' => ['Activo', 'Inactivo', 'Agotado'],
+        'medicamento' => ['Activo', 'Inactivo', 'Agotado'],
+        'transportadora' => ['Activo', 'Inactivo', 'Suspendido'],
+        'carrito' => ['Activo', 'Pendiente', 'Completado', 'Cancelado'],
+        'pedido' => ['Pendiente', 'En proceso', 'Enviado', 'Entregado', 'Completado', 'Cancelado'],
+        'venta' => ['Pendiente', 'En proceso', 'Completado', 'Cancelado'],
+        'compra_online' => ['Pendiente', 'En proceso', 'Completado', 'Cancelado'],
+        'envio' => ['Pendiente', 'En proceso', 'Enviado', 'Entregado', 'Cancelado'],
+    ],
+
     'tables' => [
     'departamento' => [
         'label' => 'Departamento',
