@@ -35,7 +35,7 @@ class Alcance
         'diagnostico' => [['id_formula', 'formula_medica', 'id_formula']],
         'detalle_formula_medica_medicamento' => [['id_formula', 'formula_medica', 'id_formula']],
         'detalle_formula_medica_procedimiento' => [['id_formula', 'formula_medica', 'id_formula']],
-        'agendamiento_procedimiento' => [['id_formula', 'formula_medica', 'id_formula']],
+        'agendamiento_procedimiento' => [['id_formula', 'formula_medica', 'id_formula'], ['id_historia_clinica', 'historia_clinica', 'id_historia_clinica']],
         'evolucion_terapia' => [['id_agendamiento_procedimiento', 'agendamiento_procedimiento', 'id_agendamiento_procedimiento']],
         'detalle_pedido_producto' => [['id_pedido', 'pedido', 'id_pedido']],
         'detalle_productos' => [['id_venta', 'venta', 'id_venta']],
