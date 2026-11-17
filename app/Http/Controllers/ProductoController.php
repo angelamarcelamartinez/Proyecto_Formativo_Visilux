@@ -42,11 +42,12 @@ class ProductoController extends Controller
 
         // Orden: más recientes primero, o por precio si el usuario lo pide
         switch ($request->get('orden')) {
+            // Los productos sin precio («Consultar») van siempre al final
             case 'precio_asc':
-                $query->orderBy('precio', 'asc');
+                $query->orderByRaw('precio IS NULL')->orderBy('precio', 'asc');
                 break;
             case 'precio_desc':
-                $query->orderBy('precio', 'desc');
+                $query->orderByRaw('precio IS NULL')->orderBy('precio', 'desc');
                 break;
             case 'nombre':
                 $query->orderBy('nombre_producto', 'asc');
@@ -92,8 +93,9 @@ class ProductoController extends Controller
         }
 
         switch ($request->get('orden')) {
-            case 'precio_asc':  $query->orderBy('precio', 'asc'); break;
-            case 'precio_desc': $query->orderBy('precio', 'desc'); break;
+            // Los productos sin precio («Consultar») van siempre al final
+            case 'precio_asc':  $query->orderByRaw('precio IS NULL')->orderBy('precio', 'asc'); break;
+            case 'precio_desc': $query->orderByRaw('precio IS NULL')->orderBy('precio', 'desc'); break;
             default:            $query->orderByDesc('id_producto');
         }
 
