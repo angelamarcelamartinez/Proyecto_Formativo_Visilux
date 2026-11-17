@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Staff;
 
 use App\Http\Controllers\Controller;
 use App\Support\AgendaCitas;
+use App\Support\Alcance;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -31,6 +32,12 @@ class RecepcionController extends Controller
         return Auth::user()->nit_empresa;
     }
 
+    /** Consulta de una tabla limitada a la óptica (solo si la tabla tiene esa columna o un padre que la tenga). */
+    protected function de(string $tabla)
+    {
+        return Alcance::restringir(DB::table($tabla), $tabla, $this->nit());
+    }
+
     protected function citasBase()
     {
         return DB::table('asignacion_cita')
@@ -54,7 +61,7 @@ class RecepcionController extends Controller
             return 0;
         }
 
-        return DB::table('mensajes_contacto')->where('nit_empresa', $this->nit())
+        return $this->de('mensajes_contacto')
             ->where('estado_contactenos', 'Por contactar')->count();
     }
 
@@ -70,7 +77,7 @@ class RecepcionController extends Controller
             ->where('asignacion_cita.id_estado', self::PENDIENTE)->count();
 
         $solicitudes = AgendaCitas::solicitudesGuardanTurno()
-            ? DB::table('usuarios_no_registrados')->where('nit_empresa', $this->nit())
+            ? $this->de('usuarios_no_registrados')
                 ->where(fn ($q) => $q->whereNull('id_estado')->orWhere('id_estado', self::PENDIENTE))->count()
             : 0;
 
@@ -114,7 +121,7 @@ class RecepcionController extends Controller
 
     protected function optometras()
     {
-        return DB::table('optometra')->where('nit_empresa', $this->nit())->where('id_estado', 1)
+        return $this->de('optometra')->where('id_estado', 1)
             ->orderBy('nombre')->get(['doc_optometra', DB::raw("CONCAT(nombre, ' ', apellido) as nombre")]);
     }
 
@@ -123,7 +130,7 @@ class RecepcionController extends Controller
     {
         $request->validate(['accion' => ['required', 'in:confirmar,cancelar']]);
 
-        $cita = DB::table('asignacion_cita')->where('id_cita', $id)->where('nit_empresa', $this->nit())->first();
+        $cita = $this->de('asignacion_cita')->where('id_cita', $id)->first();
         abort_unless($cita, 404);
 
         if ($cita->id_estado == self::COMPLETADO) {
@@ -141,8 +148,8 @@ class RecepcionController extends Controller
         return view('staff.recepcion.nueva-cita', [
             'documento' => $request->get('documento'),
             'optometras' => $this->optometras(),
-            'tiposCita' => DB::table('tipo_cita')->where('nit_empresa', $this->nit())->orderBy('nombre_tipo')->get(),
-            'motivos' => DB::table('motivos_cita')->where('nit_empresa', $this->nit())->orderBy('nombre_motivo')->get(),
+            'tiposCita' => $this->de('tipo_cita')->orderBy('nombre_tipo')->get(),
+            'motivos' => $this->de('motivos_cita')->orderBy('nombre_motivo')->get(),
             'fechaMin' => now()->toDateString(),
             'fechaMax' => now()->addDays(AgendaCitas::DIAS_MAXIMOS)->toDateString(),
         ]);
@@ -156,7 +163,7 @@ class RecepcionController extends Controller
             return response()->json(['found' => false]);
         }
 
-        $u = DB::table('usuario')->where('documento', $doc)->where('nit_empresa', $this->nit())->where('id_rol', 2)
+        $u = $this->de('usuario')->where('documento', $doc)->where('id_rol', 2)
             ->first(['documento', 'nombres', 'apellido', 'telefono']);
 
         return response()->json($u ? ['found' => true] + (array) $u : ['found' => false]);
@@ -168,7 +175,7 @@ class RecepcionController extends Controller
             'documento' => ['required', 'integer'],
             'fecha' => ['required', 'date_format:Y-m-d', 'after_or_equal:today'],
             'hora' => ['required', 'date_format:H:i'],
-            'id_optometra' => ['required', 'integer', Rule::exists('optometra', 'doc_optometra')->where('nit_empresa', $this->nit())],
+            'id_optometra' => ['required', 'integer', Rule::exists('optometra', 'doc_optometra')],
             'id_tipo_cita' => ['required', 'integer', 'exists:tipo_cita,id_tipo_cita'],
             'id_motivo' => ['required', 'integer', 'exists:motivos_cita,id_motivo'],
             'observaciones' => ['nullable', 'string', 'max:500'],
@@ -280,7 +287,7 @@ class RecepcionController extends Controller
     public function contacto(): View
     {
         $mensajes = Schema::hasColumn('mensajes_contacto', 'estado_contactenos')
-            ? DB::table('mensajes_contacto')->where('nit_empresa', $this->nit())
+            ? $this->de('mensajes_contacto')
                 ->orderBy('estado_contactenos')->orderByDesc('fecha_contactenos')->limit(100)->get()
             : collect();
 
@@ -289,7 +296,7 @@ class RecepcionController extends Controller
 
     public function contactoEstado(int $id): RedirectResponse
     {
-        $m = DB::table('mensajes_contacto')->where('id_contactenos', $id)->where('nit_empresa', $this->nit())->first();
+        $m = $this->de('mensajes_contacto')->where('id_contactenos', $id)->first();
         abort_unless($m, 404);
 
         $nuevo = $m->estado_contactenos === 'Contactado' ? 'Por contactar' : 'Contactado';
@@ -301,7 +308,7 @@ class RecepcionController extends Controller
     /** Solicitudes de cita de visitantes sin cuenta (formulario público "Agenda tu cita"). */
     public function solicitudes(): View
     {
-        $solicitudes = DB::table('usuarios_no_registrados')->where('nit_empresa', $this->nit())
+        $solicitudes = $this->de('usuarios_no_registrados')
             ->orderByDesc('fecha_registro')->limit(100)->get();
 
         return view('staff.recepcion.solicitudes', compact('solicitudes'));
