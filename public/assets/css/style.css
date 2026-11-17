@@ -1098,3 +1098,83 @@ body {
 
 /* Foto de la optómetra pediátrica: encuadra el rostro */
 .sk-photo .sk-foto-pediatra { object-position: center 20%; }
+
+/* ======================================================
+   Terapia Visual (vista actual): introducción, pilares,
+   sección para niños, adultos y llamado a la acción.
+   Clases tv-* y ninos-* de resources/views/terapia-visual.blade.php
+====================================================== */
+.tv-intro { padding: 4.5rem 0 3.5rem; background: #fff; }
+.tv-eyebrow { display: inline-flex; align-items: center; gap: .6rem; font-size: .78rem; font-weight: 600; letter-spacing: .12em;
+    text-transform: uppercase; color: var(--gold); margin-bottom: .6rem; }
+.tv-eyebrow::before, .tv-eyebrow::after { content: ''; width: 26px; height: 2px; border-radius: 2px; background: var(--gold-light); }
+
+.tv-pilares { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-top: 2.5rem; }
+.tv-pilar { display: flex; align-items: center; gap: .9rem; padding: 1.1rem 1.2rem; background: #fff; border: 1px solid #eee6d4;
+    border-radius: 1.25rem; box-shadow: 0 .5rem 1.4rem rgba(60,45,10,.06); transition: transform .25s, border-color .25s, box-shadow .25s; }
+.tv-pilar:hover { transform: translateY(-4px); border-color: var(--gold-light); box-shadow: 0 1rem 1.8rem rgba(60,45,10,.1); }
+.tv-pilar > i { width: 48px; height: 48px; flex: none; display: grid; place-items: center; border-radius: 14px; font-size: 1.35rem;
+    color: #fff; background: var(--gradient); box-shadow: 0 .4rem .9rem rgba(176,141,62,.3); }
+.tv-pilar > div { display: flex; flex-direction: column; line-height: 1.25; }
+.tv-pilar b { color: var(--heading); font-weight: 600; }
+.tv-pilar span { font-size: .85rem; color: var(--text-muted); }
+@media (max-width: 991px) { .tv-pilares { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 575px) { .tv-pilares { grid-template-columns: 1fr; } }
+
+/* ---------- Para niños: colores alegres, como la tarjeta infantil del inicio ---------- */
+.ninos-seccion { position: relative; overflow: hidden; background: linear-gradient(180deg, #fff8e1 0%, #fdfaf3 100%); }
+.ninos-seccion .section-title span { background: linear-gradient(90deg, #ef5350, #ffb300 45%, #66bb6a 75%, #29b6f6);
+    -webkit-background-clip: text; background-clip: text; color: transparent; }
+.ninos-figura { position: absolute; font-size: 2.2rem; opacity: .18; pointer-events: none; line-height: 1; }
+.ninos-f1 { top: 8%;  left: 6%;  color: #ffb300; transform: rotate(-12deg); }
+.ninos-f2 { top: 14%; right: 8%; color: #29b6f6; font-size: 1.6rem; }
+.ninos-f3 { bottom: 12%; left: 10%; color: #66bb6a; transform: rotate(10deg); }
+.ninos-f4 { bottom: 8%; right: 6%; color: #ef5350; font-size: 1.8rem; transform: rotate(18deg); }
+.ninos-duracion { font-size: .85rem; font-weight: 600; padding: .5rem 1rem; color: #7a5200; background: #ffe7a3; }
+
+.ninos-card { position: relative; overflow: hidden; font-family: 'Fredoka', 'Poppins', sans-serif; border: 0 !important;
+    border-radius: 1.5rem !important; background: #fff; box-shadow: 0 .8rem 1.8rem rgba(60,45,10,.08) !important;
+    border-top: 6px solid var(--ninos-color) !important; transition: transform .25s, box-shadow .25s; }
+.ninos-card:hover { transform: translateY(-6px) rotate(-.5deg); box-shadow: 0 1.2rem 2.2rem rgba(60,45,10,.14) !important; }
+.ninos-card p { font-family: 'Poppins', sans-serif; }
+.ninos-rojo     { --ninos-color: #ef5350; --ninos-suave: #fdecea; }
+.ninos-azul     { --ninos-color: #29b6f6; --ninos-suave: #e3f5fd; }
+.ninos-amarillo { --ninos-color: #ffb300; --ninos-suave: #fff4d6; }
+.ninos-num { position: absolute; top: .6rem; right: 1rem; font-size: 3rem; font-weight: 700; line-height: 1; color: var(--ninos-color); opacity: .15; }
+.ninos-card .ninos-icono { width: 60px; height: 60px; display: grid; place-items: center; font-size: 1.6rem; color: #fff;
+    border-radius: 50% 50% 50% 14px; background: var(--ninos-color); box-shadow: 0 .3rem 0 rgba(0,0,0,.12); transform: rotate(-6deg); }
+.ninos-card h3 { color: var(--heading); }
+
+/* ---------- Para adultos ---------- */
+.tv-adultos { padding: 5rem 0; background: var(--bg-mint); }
+.tv-card { border: 1px solid #eee6d4 !important; border-left: 5px solid var(--gold) !important; border-radius: 1.25rem !important;
+    background: #fff; box-shadow: 0 .6rem 1.6rem rgba(60,45,10,.07) !important; transition: transform .25s, box-shadow .25s; }
+.tv-card:hover { transform: translateY(-5px); box-shadow: 0 1.1rem 2rem rgba(60,45,10,.12) !important; }
+
+/* ---------- Llamado a la acción ---------- */
+.tv-cta { padding: 4.5rem 0 5rem; background: #fff; }
+.tv-cta-box { position: relative; overflow: hidden; padding: 3.5rem 1.5rem; border-radius: 2rem; color: #fff;
+    background: radial-gradient(600px 260px at 90% 0%, rgba(212,175,106,.45), transparent 60%), linear-gradient(135deg, #2a2a2a 0%, #3a3a3a 55%, #5a4a2a 100%);
+    box-shadow: 0 1.2rem 2.6rem rgba(40,30,10,.25); }
+.tv-cta-box .section-title { color: #fff; }
+.tv-cta-box p { color: rgba(255,255,255,.82); }
+
+/* Inicio: la tarjeta infantil y el bloque de Adultos van sin marco, solo con sombra suave
+   (solo en el inicio; en /productos/ninos la tarjeta infantil conserva su marco de colores) */
+.ini-caja-abierta .service-card-kids,
+.ini-caja-abierta .ini-bloque-adultos {
+    margin: 0;
+    box-shadow: 0 18px 30px rgba(120,90,30,.18) !important;
+}
+/* El mismo marquito claro de 5px que ya tenía la tarjeta infantil */
+.ini-caja-abierta .ini-bloque-adultos {
+    border: 5px solid transparent;
+    background-clip: padding-box;
+}
+
+/* Página Niños: título "Gafas y cositas para niños" más legible y recuadro de "niños" en rosado */
+.kids-title { font-family: 'Fredoka', 'Poppins', sans-serif; font-weight: 700; letter-spacing: .01em; color: #2e2378;
+    text-shadow: 0 3px 0 #fff, 0 6px 14px rgba(91,75,219,.18); }
+.kids-title span { color: #ff4f8b; }
+.kids-title em { color: #fff; background: linear-gradient(135deg, #29b6f6 0%, #8c7cf0 50%, #ff4f8b 100%); padding: .02em .45em .08em;
+    border-radius: 20px; box-shadow: 0 6px 0 #9b4fb5, 0 12px 22px rgba(140,90,200,.3); text-shadow: 0 2px 0 rgba(60,30,110,.35); }

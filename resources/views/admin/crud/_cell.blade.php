@@ -11,6 +11,14 @@
 
 @if (is_null($val) || $val === '')
     <span class="text-muted">—</span>
+@elseif ($name === 'estado_contactenos')
+    {{-- Mensajes de Contáctanos: el estado como etiqueta de color --}}
+    <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-semibold whitespace-nowrap
+                 {{ $val === 'Contactado' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700' }}">{{ $val }}</span>
+@elseif ($name === 'correo_contactenos')
+    <a href="mailto:{{ $val }}" class="text-olive-700 hover:underline break-all">{{ $val }}</a>
+@elseif ($name === 'telefono_contactenos')
+    <a href="tel:{{ preg_replace('/[^0-9+]/', '', $val) }}" class="text-olive-700 hover:underline whitespace-nowrap">{{ $val }}</a>
 @elseif ($col['type'] === 'file')
     @php
         $src = \Illuminate\Support\Str::startsWith($val, ['http://', 'https://', '/'])

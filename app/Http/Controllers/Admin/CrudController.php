@@ -316,6 +316,23 @@ class CrudController extends Controller
     }
 
     /** Filtros disponibles para la tabla, con sus opciones ya cargadas. */
+    /**
+     * Orden del listado: el de 'order_by' en config/admin_tables.php si la tabla lo trae;
+     * si no, los registros más nuevos primero (llave primaria descendente).
+     */
+    protected function ordenar(Builder $query, string $table, array $config): Builder
+    {
+        if (empty($config['order_by'])) {
+            return $query->orderByDesc("{$table}.{$config['primary_key']}");
+        }
+
+        foreach ($config['order_by'] as [$columna, $direccion]) {
+            $query->orderBy("{$table}.{$columna}", $direccion);
+        }
+
+        return $query->orderByDesc("{$table}.{$config['primary_key']}");
+    }
+
     protected function filterDefinitions(array $config): array
     {
         $defs = [];
@@ -397,7 +414,7 @@ class CrudController extends Controller
         $query = $this->baseQuery($table, $config);
         $this->applySearchAndFilters($query, $table, $config, $request);
 
-        $rows = $query->orderByDesc("{$table}.{$pk}")->paginate(15)->withQueryString();
+        $rows = $this->ordenar($query, $table, $config)->paginate(15)->withQueryString();
         // Los links de paginación siempre apuntan al listado normal (no a la respuesta parcial)
         $rows->withPath(route('admin.crud.index', $table));
 
@@ -437,7 +454,7 @@ class CrudController extends Controller
 
         $query = $this->baseQuery($table, $config);
         $this->applySearchAndFilters($query, $table, $config, $request);
-        $rows = $query->orderByDesc("{$table}.{$config['primary_key']}")->limit(20000)->get();
+        $rows = $this->ordenar($query, $table, $config)->limit(20000)->get();
 
         $columns = array_values($this->allDisplayColumns($config));
         $fkMaps = $this->fkMapsFor($config, $rows);
@@ -785,6 +802,9 @@ class CrudController extends Controller
     {
         $this->exigirEscritura($table);
         $config = $this->tableConfig($table);
+        if (! empty($config['sin_crear'])) {
+            throw new NotFoundHttpException('Estos registros no se crean desde el panel.');
+        }
 
         return view('admin.crud.form', [
             'table' => $table,
@@ -799,6 +819,9 @@ class CrudController extends Controller
     {
         $this->exigirEscritura($table);
         $config = $this->tableConfig($table);
+        if (! empty($config['sin_crear'])) {
+            throw new NotFoundHttpException('Estos registros no se crean desde el panel.');
+        }
 
         [$rules, $labels] = $this->buildRules($config, isEdit: false, table: $table);
 

@@ -89,10 +89,9 @@ class SiteController extends Controller
     /**
      * Procesa el formulario de contacto de la vista "Conócenos".
      *
-     * Por ahora el mensaje solo se confirma en pantalla (no se persiste
-     * en base de datos porque no existe una tabla para ello). Si más
-     * adelante quieres guardarlo o enviarlo por correo, aquí es donde
-     * se agregaría esa lógica (Mail::to(...)->send(...) o un insert).
+     * El mensaje se guarda en la tabla `mensajes_contacto` con el NIT de la
+     * óptica que se estaba viendo, y aparece en el panel del administrador
+     * en "Por contactar" (CRUD genérico, config/admin_tables.php).
      */
     public function enviarContacto(Request $request)
     {
@@ -102,6 +101,31 @@ class SiteController extends Controller
             'telefono' => ['nullable', 'string', 'max:20'],
             'mensaje' => ['required', 'string', 'max:2000'],
         ]);
+
+        // Se guarda a nombre de la óptica cuya página estaba viendo el visitante
+        // (la recuerda mostrarPagina() en la sesión). El administrador de esa óptica
+        // lo ve en su panel, en "Por contactar".
+        if (Schema::hasTable('mensajes_contacto')) {
+            $mensaje = [
+                'nombre_contactenos' => $request->input('nombre'),
+                'correo_contactenos' => $request->input('correo'),
+                'telefono_contactenos' => $request->input('telefono'),
+                'mensaje_contactenos' => $request->input('mensaje'),
+            ];
+
+            // Columnas del script database/sql/2026_10_19_mensajes_contacto.sql (si ya se ejecutó)
+            if (Schema::hasColumn('mensajes_contacto', 'nit_empresa')) {
+                $mensaje['nit_empresa'] = session('optica_nit', config('visioptica.empresa_principal'));
+            }
+            if (Schema::hasColumn('mensajes_contacto', 'estado_contactenos')) {
+                $mensaje['estado_contactenos'] = 'Por contactar';
+            }
+            if (Schema::hasColumn('mensajes_contacto', 'fecha_contactenos')) {
+                $mensaje['fecha_contactenos'] = now();
+            }
+
+            DB::table('mensajes_contacto')->insert($mensaje);
+        }
 
         return back()->with('contacto_enviado', true);
     }

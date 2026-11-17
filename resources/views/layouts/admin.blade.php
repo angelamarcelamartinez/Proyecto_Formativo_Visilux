@@ -11,7 +11,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 
     {{-- Estilos y scripts locales: el panel funciona sin depender de CDNs --}}
-    <link rel="stylesheet" href="{{ asset('assets/css/panel.css') }}?v={{ filemtime(public_path('assets/css/panel.css')) }}">
+    <link rel="stylesheet" href="{{ asset('assets/css/panel.css') }}?v={{ @filemtime(public_path('assets/css/panel.css')) ?: '20261014' }}">
     <script defer src="{{ asset('assets/js/alpine-collapse.min.js') }}"></script>
     <script defer src="{{ asset('assets/js/alpine.min.js') }}"></script>
     <script defer src="{{ asset('assets/js/chart.umd.min.js') }}"></script>
@@ -59,6 +59,24 @@
                       {{ request()->routeIs('admin.equipo.*') ? 'bg-olive-600 text-cream shadow-card' : 'text-ink/80 hover:bg-olive-100' }}">
                 @include('partials.icon', ['name' => 'users', 'class' => 'w-5 h-5 shrink-0'])
                 Equipo
+            </a>
+
+            @php
+                // Mensajes del formulario "Contáctanos" de esta óptica que aún no se han atendido
+                $porContactar = \Illuminate\Support\Facades\Schema::hasColumn('mensajes_contacto', 'estado_contactenos')
+                    ? \App\Support\Alcance::restringir(\Illuminate\Support\Facades\DB::table('mensajes_contacto'), 'mensajes_contacto')
+                        ->where('estado_contactenos', 'Por contactar')->count()
+                    : 0;
+                $enContacto = request()->routeIs('admin.crud.*') && request()->route('table') === 'mensajes_contacto';
+            @endphp
+            <a href="{{ route('admin.crud.index', 'mensajes_contacto') }}"
+               class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition
+                      {{ $enContacto ? 'bg-olive-600 text-cream shadow-card' : 'text-ink/80 hover:bg-olive-100' }}">
+                @include('partials.icon', ['name' => 'mail', 'class' => 'w-5 h-5 shrink-0'])
+                <span class="flex-1">Por contactar</span>
+                @if ($porContactar > 0)
+                    <span class="text-[11px] font-semibold rounded-full px-2 py-0.5 bg-amber-100 text-amber-700">{{ $porContactar }}</span>
+                @endif
             </a>
 
             <p class="px-3 pt-5 pb-1 text-[11px] font-semibold uppercase tracking-wider text-muted">Tablas del sistema</p>

@@ -171,6 +171,9 @@ Route::prefix('admin')->middleware(['auth', 'cambiar.password', 'admin', 'licenc
     Route::post('/usuario/{documento}/estado', [\App\Http\Controllers\Admin\UsuarioEstadoController::class, 'cambiar'])
         ->name('usuario.estado');
 
+    // "Por contactar": marcar un mensaje de Contáctanos como contactado (o volverlo a pendiente)
+    Route::post('/por-contactar/{id}/estado', [\App\Http\Controllers\Admin\ContactoController::class, 'estado'])->name('contacto.estado');
+
     // CRUD genérico
     // Autocompletar datos del paciente por documento (citas, fórmulas médicas)
     Route::get('/buscar-usuario', [CrudController::class, 'buscarUsuario'])->name('buscar-usuario');
