@@ -48,3 +48,8 @@
 .chat-enviar{background:#7e6427;color:#fff;border:0;border-radius:.75rem;padding:.6rem 1.1rem;font-size:.875rem;font-weight:500}
 .chat-enviar:hover{background:#6b5522}
 @media (max-width:767px){.chat{flex-direction:column;height:auto;max-height:none}.chat-lista{width:100%;max-height:9rem;border-right:0;border-bottom:1px solid #efe2c4}.chat-mensajes{min-height:18rem}}
+
+/* ---- Solicitudes web: menú «Contactar con el paciente» ---- */
+details>summary{list-style:none}
+details>summary::-webkit-details-marker{display:none}
+details a:hover{background:#faf7f2}

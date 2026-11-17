@@ -75,6 +75,12 @@ class AgendaCitas
         return DB::table('estado')->where('nom_estado', 'Cancelado')->value('id_estado');
     }
 
+    /** Id del estado "Confirmada" (11 si la tabla estado no lo trae con ese nombre). */
+    public static function estadoConfirmada(): int
+    {
+        return (int) (DB::table('estado')->where('nom_estado', 'Confirmada')->value('id_estado') ?? 11);
+    }
+
     /** Id del estado con el que nace una cita nueva ("Pendiente"). */
     public static function estadoPendiente(): int
     {
@@ -135,14 +141,14 @@ class AgendaCitas
             });
 
         // Solicitudes de visitantes (sin cuenta) que siguen pendientes:
-        // también apartan el turno hasta que el administrador las resuelva.
+        // también apartan el turno hasta que el administrador las resuelva (pendientes o ya confirmadas por recepción).
         // El tipo de cita de una solicitud va escrito en el texto del motivo.
         if (self::solicitudesGuardanTurno()) {
             $pendiente = self::estadoPendiente();
             $solicitudes = DB::table('usuarios_no_registrados')
                 ->whereDate('fecha_cita', $fecha->toDateString())
                 ->whereNotNull('hora_cita')
-                ->where(fn ($q) => $q->whereNull('id_estado')->orWhere('id_estado', $pendiente))
+                ->where(fn ($q) => $q->whereNull('id_estado')->orWhereIn('id_estado', [$pendiente, self::estadoConfirmada()]))
                 ->get(['id_optometra', 'hora_cita', 'motivo_cita'])
                 ->map(function ($c) {
                     $ini = self::aMinutos($c->hora_cita);

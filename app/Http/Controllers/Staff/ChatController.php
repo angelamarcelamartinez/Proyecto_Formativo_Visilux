@@ -78,7 +78,11 @@ class ChatController extends Controller
             if ($mensajes->isNotEmpty()) {
                 ChatArchivo::marcarLeido($nit, $yo, (int) $actual->documento, (int) $mensajes->max('id_chat'));
             }
-            $contactos->each(fn ($c) => $c->documento == $actual->documento ? $c->sinLeer = 0 : null);
+            foreach ($contactos as $c) {
+                if ($c->documento == $actual->documento) {
+                    $c->sinLeer = 0;
+                }
+            }
         }
 
         return view('staff.chat.index', [

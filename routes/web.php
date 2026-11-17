@@ -209,6 +209,9 @@ Route::prefix('recepcion')->middleware(['auth', 'cambiar.password', 'rol:4'])->n
     Route::get('/por-contactar', [$c, 'contacto'])->name('contacto');
     Route::post('/por-contactar/{id}/estado', [$c, 'contactoEstado'])->name('contacto.estado');
     Route::get('/solicitudes', [$c, 'solicitudes'])->name('solicitudes');
+    Route::post('/solicitudes/{id}/registrar', [$c, 'solicitudRegistrar'])->name('solicitud.registrar');
+    Route::get('/solicitudes/{id}/agendar', [$c, 'solicitudAgendar'])->name('solicitud.agendar');
+    Route::post('/solicitudes/{id}/agendar', [$c, 'solicitudGuardar'])->name('solicitud.guardar');
 });
 
 // --- Chat interno: recepcionista (4) y optómetra (7) de la misma óptica ---

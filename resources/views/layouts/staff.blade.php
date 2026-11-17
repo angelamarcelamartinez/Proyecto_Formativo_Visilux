@@ -23,7 +23,7 @@
             $panelNombre = 'Panel del optómetra';
         } else {
             $pendientesContacto = \Illuminate\Support\Facades\Schema::hasColumn('mensajes_contacto', 'estado_contactenos')
-                ? \Illuminate\Support\Facades\DB::table('mensajes_contacto')->where('nit_empresa', $yo->nit_empresa)->where('estado_contactenos', 'Por contactar')->count()
+                ? \Illuminate\Support\Facades\DB::table('mensajes_contacto')->whereRaw("SUBSTR(REPLACE(REPLACE(REPLACE(CAST(nit_empresa AS CHAR), '-', ''), '.', ''), ' ', ''), 1, 9) = ?", [substr(preg_replace('/\\D/', '', (string) $yo->nit_empresa), 0, 9)])->where('estado_contactenos', 'Por contactar')->count()
                 : 0;
             $menu = [
                 ['recepcion.inicio', 'Inicio', 'grid', 'recepcion.inicio', null],
