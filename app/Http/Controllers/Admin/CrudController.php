@@ -228,13 +228,29 @@ class CrudController extends Controller
     /**
      * Todas las opciones (valor => etiqueta) de una llave foránea, para los selects.
      */
-    protected function fkOptions(array $col): array
+    protected function fkOptions(array $col, ?string $table = null): array
     {
-        return $this->labelQuery($col['fk_table'], $col['fk_column'], $col['fk_display'])
+        $consulta = $this->labelQuery($col['fk_table'], $col['fk_column'], $col['fk_display']);
+
+        // Estado: solo los que tienen sentido para esta tabla (config/admin_tables.php → estados_por_tabla)
+        if ($col['fk_table'] === 'estado' && ($permitidos = $this->estadosPermitidos($table))) {
+            $consulta->whereIn('estado.nom_estado', $permitidos);
+        }
+
+        return $consulta
             ->limit(2000)
             ->get()
             ->mapWithKeys(fn ($row) => [(string) $row->v => $row->l])
             ->all();
+    }
+
+    /**
+     * Estados que se pueden elegir en una tabla (null = todos).
+     * Ej.: un usuario solo puede estar Activo, Inactivo o Pendiente; nunca "Enviado" o "Agotado".
+     */
+    protected function estadosPermitidos(?string $table): ?array
+    {
+        return $table ? config("admin_tables.estados_por_tabla.{$table}") : null;
     }
 
     /**
@@ -316,7 +332,7 @@ class CrudController extends Controller
     }
 
     /** Filtros disponibles para la tabla, con sus opciones ya cargadas. */
-    protected function filterDefinitions(array $config): array
+    protected function filterDefinitions(array $config, ?string $table = null): array
     {
         $defs = [];
         $columns = collect($config['columns'])->keyBy('name');
@@ -330,7 +346,7 @@ class CrudController extends Controller
             if (in_array($col['type'], ['date', 'datetime-local'], true)) {
                 $defs[] = ['name' => $name, 'label' => $col['label'], 'kind' => 'date', 'type' => $col['type']];
             } elseif ($col['is_fk']) {
-                $defs[] = ['name' => $name, 'label' => $col['label'], 'kind' => 'select', 'options' => $this->fkOptions($col)];
+                $defs[] = ['name' => $name, 'label' => $col['label'], 'kind' => 'select', 'options' => $this->fkOptions($col, $table)];
             } elseif (! empty($col['options'])) {
                 $defs[] = ['name' => $name, 'label' => $col['label'], 'kind' => 'select', 'options' => array_combine($col['options'], $col['options'])];
             }
@@ -418,7 +434,7 @@ class CrudController extends Controller
         }
 
         return view('admin.crud.index', $data + [
-            'filters' => $this->filterDefinitions($config),
+            'filters' => $this->filterDefinitions($config, $table),
             'reportStats' => $this->buildReportStats($table),
             'reportCharts' => $this->buildReportCharts($table),
         ]);
@@ -775,12 +791,12 @@ class CrudController extends Controller
         return true;
     }
 
-    protected function formOptions(array $config): array
+    protected function formOptions(array $config, ?string $table = null): array
     {
         $fkOptions = [];
         foreach ($config['columns'] as $col) {
             if ($col['is_fk'] && empty($col['lookup'])) {
-                $fkOptions[$col['name']] = $this->fkOptions($col);
+                $fkOptions[$col['name']] = $this->fkOptions($col, $table);
             }
         }
 
@@ -804,7 +820,7 @@ class CrudController extends Controller
             'table' => $table,
             'config' => $config,
             'record' => null,
-            'fkOptions' => $this->formOptions($config),
+            'fkOptions' => $this->formOptions($config, $table),
             'mode' => 'create',
         ]);
     }
@@ -858,7 +874,7 @@ class CrudController extends Controller
             'table' => $table,
             'config' => $config,
             'record' => $record,
-            'fkOptions' => $this->formOptions($config),
+            'fkOptions' => $this->formOptions($config, $table),
             'mode' => 'edit',
         ]);
     }
@@ -1105,7 +1121,10 @@ class CrudController extends Controller
                     $fieldRules[] = 'regex:/^([01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?$/';
                     break;
                 case 'select':
-                    if ($col['is_fk']) {
+                    if ($col['is_fk'] && $col['fk_table'] === 'estado' && ($permitidos = $this->estadosPermitidos($table))) {
+                        // Tampoco se puede guardar un estado que no aplica a la tabla
+                        $fieldRules[] = Rule::exists('estado', 'id_estado')->where(fn ($q) => $q->whereIn('nom_estado', $permitidos));
+                    } elseif ($col['is_fk']) {
                         $fieldRules[] = Rule::exists($col['fk_table'], $col['fk_column']);
                     } elseif (! empty($col['options'])) {
                         $fieldRules[] = Rule::in($col['options']);
