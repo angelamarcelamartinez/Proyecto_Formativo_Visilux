@@ -28,7 +28,9 @@
         <span class="text-red-600" title="Este valor no existe en {{ $col['fk_table'] }}">{{ $val }} <small>(no registrado)</small></span>
     @endif
 @elseif ($col['type'] === 'decimal' && $isMoney)
-    <span class="font-medium">${{ number_format((float) $val, 2) }}</span>
+    {{-- Pesos colombianos: $26.800.000 (coma decimal solo si el valor tiene centavos: $1,20) --}}
+    @php $num = (float) $val; @endphp
+    <span class="font-medium whitespace-nowrap">${{ number_format($num, floor($num) == $num ? 0 : 2, ',', '.') }}</span>
 @elseif ($col['type'] === 'time')
     {{ substr($val, 0, 5) }}
 @elseif ($col['type'] === 'datetime-local')

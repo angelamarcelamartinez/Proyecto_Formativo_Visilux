@@ -675,6 +675,20 @@ class CrudController extends Controller
         ];
     }
 
+    /** Pesos colombianos: $26.800.000 (sin decimales; con coma decimal solo si los tiene: $1,20). */
+    protected function pesos($valor): string
+    {
+        $v = (float) $valor;
+
+        return '$'.number_format($v, floor($v) == $v ? 0 : 2, ',', '.');
+    }
+
+    /** Cantidades con punto de miles: 1.250 */
+    protected function numero($valor): string
+    {
+        return number_format((float) $valor, 0, ',', '.');
+    }
+
     protected function reportStatsProducto(): array
     {
         $total = $this->propia('producto')->count();
@@ -685,9 +699,9 @@ class CrudController extends Controller
         $valorInventario = (float) ($this->propia('lote')->selectRaw('SUM(stock_actual * precio_venta) as v')->value('v') ?? 0);
 
         return [
-            ['label' => 'Productos registrados', 'value' => number_format($total)],
-            ['label' => 'Con stock bajo', 'value' => number_format($stockBajo)],
-            ['label' => 'Valor total en inventario', 'value' => '$'.number_format($valorInventario)],
+            ['label' => 'Productos registrados', 'value' => $this->numero($total)],
+            ['label' => 'Con stock bajo', 'value' => $this->numero($stockBajo)],
+            ['label' => 'Valor total en inventario', 'value' => $this->pesos($valorInventario)],
         ];
     }
 
@@ -698,9 +712,9 @@ class CrudController extends Controller
         $valorInventario = (float) ($this->propia('lote')->selectRaw('SUM(stock_actual * precio_venta) as v')->value('v') ?? 0);
 
         return [
-            ['label' => 'Unidades en stock', 'value' => number_format($totalUnidades)],
-            ['label' => 'Lotes con stock bajo', 'value' => number_format($lotesBajos)],
-            ['label' => 'Valor total en inventario', 'value' => '$'.number_format($valorInventario)],
+            ['label' => 'Unidades en stock', 'value' => $this->numero($totalUnidades)],
+            ['label' => 'Lotes con stock bajo', 'value' => $this->numero($lotesBajos)],
+            ['label' => 'Valor total en inventario', 'value' => $this->pesos($valorInventario)],
         ];
     }
 
@@ -719,9 +733,9 @@ class CrudController extends Controller
         $ticketPromedio = $numVentasMes > 0 ? $ventasMes / $numVentasMes : 0;
 
         return [
-            ['label' => 'Ventas hoy', 'value' => '$'.number_format($ventasHoy)],
-            ['label' => 'Ventas este mes', 'value' => '$'.number_format($ventasMes)],
-            ['label' => 'Ticket promedio (mes)', 'value' => '$'.number_format($ticketPromedio)],
+            ['label' => 'Ventas hoy', 'value' => $this->pesos($ventasHoy)],
+            ['label' => 'Ventas este mes', 'value' => $this->pesos($ventasMes)],
+            ['label' => 'Ticket promedio (mes)', 'value' => $this->pesos(round($ticketPromedio))],
         ];
     }
 
@@ -741,9 +755,9 @@ class CrudController extends Controller
             ->count();
 
         return [
-            ['label' => 'Citas hoy', 'value' => number_format($citasHoy)],
-            ['label' => 'Citas este mes', 'value' => number_format($citasMes)],
-            ['label' => 'Completadas este mes', 'value' => number_format($completadasMes)],
+            ['label' => 'Citas hoy', 'value' => $this->numero($citasHoy)],
+            ['label' => 'Citas este mes', 'value' => $this->numero($citasMes)],
+            ['label' => 'Completadas este mes', 'value' => $this->numero($completadasMes)],
         ];
     }
 
