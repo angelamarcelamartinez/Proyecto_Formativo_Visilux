@@ -20,6 +20,8 @@ return Application::configure(basePath: dirname(__DIR__))
             'admin' => \App\Http\Middleware\EnsureUserIsAdmin::class,
             // superadmin → solo el superadmin (si no, responde 404).
             'superadmin' => \App\Http\Middleware\SoloSuperadmin::class,
+            // rol → solo deja pasar a los roles indicados, por ejemplo ->middleware('rol:4') o 'rol:7'.
+            'rol' => \App\Http\Middleware\SoloRol::class,
             // cambiar.password → obliga a cambiar la contraseña temporal.
             'cambiar.password' => \App\Http\Middleware\CambiarPasswordObligatorio::class,
             // licencia → exige licencia vigente o manda a renovar.

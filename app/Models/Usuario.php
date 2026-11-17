@@ -83,8 +83,8 @@ class Usuario extends Authenticatable
     public function getDebeCambiarPasswordAttribute(): bool
     {
         // Administradores y empleados (vendedor, recepcionista, auditor...). Los clientes no usan contraseña temporal.
-        // in_array comprueba que el rol sea admin (1) o empleado (3, 4, 5) Y que el estado sea 3.
-        return in_array((int) $this->id_rol, [(int) config('visioptica.rol_admin'), 3, 4, 5], true)
+        // in_array comprueba que el rol sea admin (1) o empleado (3 vendedor, 4 recepcionista, 5 auditor, 7 optómetra) Y que el estado sea 3.
+        return in_array((int) $this->id_rol, [(int) config('visioptica.rol_admin'), 3, 4, 5, 7], true)
             && (int) $this->id_estado === 3;
     }
 
@@ -92,6 +92,25 @@ class Usuario extends Authenticatable
     public function esAdministrador(): bool
     {
         return (int) $this->id_rol === 1;
+    }
+
+    // Página de inicio según el rol: cada uno entra a su propio panel.
+    public function rutaInicio(): string
+    {
+        if ($this->esSuperadmin()) {
+            return '/superadmin';
+        }
+        if ($this->esAdministrador()) {
+            return '/admin';
+        }
+        if ((int) $this->id_rol === (int) config('visioptica.rol_recepcionista')) {
+            return '/recepcion';
+        }
+        if ((int) $this->id_rol === (int) config('visioptica.rol_optometra')) {
+            return '/optometra';
+        }
+
+        return '/';
     }
 
     // ¿Es el superadmin? Compara con config('visioptica.rol_superadmin') = 6.

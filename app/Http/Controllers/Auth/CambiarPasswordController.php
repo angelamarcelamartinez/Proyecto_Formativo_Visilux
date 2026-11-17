@@ -65,6 +65,6 @@ class CambiarPasswordController extends Controller
     // Administrador → /admin; cualquier otro → /.
     private function destino(Request $request): string
     {
-        return $request->user()->esAdministrador() ? '/admin' : '/';
+        return $request->user()->rutaInicio();
     }
 }

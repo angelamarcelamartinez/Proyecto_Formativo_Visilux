@@ -186,3 +186,27 @@ Route::prefix('admin')->middleware(['auth', 'cambiar.password', 'admin', 'licenc
     Route::put('/{table}/{id}', [CrudController::class, 'update'])->name('crud.update');
     Route::delete('/{table}/{id}', [CrudController::class, 'destroy'])->name('crud.destroy');
 });
+
+// --- Panel de la recepcionista (rol 4) ---
+Route::prefix('recepcion')->middleware(['auth', 'cambiar.password', 'rol:4'])->name('recepcion.')->group(function () {
+    $c = \App\Http\Controllers\Staff\RecepcionController::class;
+
+    Route::get('/', [$c, 'inicio'])->name('inicio');
+
+    // Citas de toda la óptica: ver, confirmar, cancelar y agendar nuevas
+    Route::get('/citas', [$c, 'citas'])->name('citas');
+    Route::get('/citas/nueva', [$c, 'nuevaCita'])->name('cita.nueva');
+    Route::post('/citas', [$c, 'guardarCita'])->name('cita.guardar');
+    Route::post('/citas/{id}/estado', [$c, 'estadoCita'])->name('cita.estado');
+    Route::get('/buscar-paciente', [$c, 'buscarPaciente'])->name('buscar-paciente');
+
+    // Pacientes
+    Route::get('/pacientes', [$c, 'pacientes'])->name('pacientes');
+    Route::get('/pacientes/nuevo', [$c, 'nuevoPaciente'])->name('paciente.nuevo');
+    Route::post('/pacientes', [$c, 'guardarPaciente'])->name('paciente.guardar');
+
+    // Mensajes de "Contáctanos" y solicitudes de visitantes
+    Route::get('/por-contactar', [$c, 'contacto'])->name('contacto');
+    Route::post('/por-contactar/{id}/estado', [$c, 'contactoEstado'])->name('contacto.estado');
+    Route::get('/solicitudes', [$c, 'solicitudes'])->name('solicitudes');
+});

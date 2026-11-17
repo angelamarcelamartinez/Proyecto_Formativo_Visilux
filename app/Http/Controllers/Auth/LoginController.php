@@ -60,8 +60,8 @@ class LoginController extends Controller
             return '/cambiar-password';
         }
 
-        // Administrador → /admin; los demás → /.
-        return ($user && $user->esAdministrador()) ? '/admin' : '/';
+        // Cada rol va a su panel: administrador → /admin, recepcionista → /recepcion, optómetra → /optometra; los demás → /.
+        return $user ? $user->rutaInicio() : '/';
     }
 
     /**

@@ -5,6 +5,9 @@ return [
     // Roles de la tabla `rol`
     'rol_admin' => 1,
     'rol_superadmin' => 6,
+    // Roles del personal de cada óptica (tabla `rol`). El 7 se crea con database/sql/2026_11_17_rol_optometra.sql
+    'rol_recepcionista' => 4,
+    'rol_optometra' => 7,
 
     // Dirección del login del superadmin (sin "/" al inicio). No aparece en
     // ningún botón ni enlace del sitio: solo la conoce el superadmin. Cámbiala en el .env con SUPERADMIN_LOGIN_PATH.
