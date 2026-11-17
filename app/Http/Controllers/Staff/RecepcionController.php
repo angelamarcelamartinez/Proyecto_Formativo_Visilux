@@ -64,14 +64,14 @@ class RecepcionController extends Controller
         return DB::table('asignacion_cita')
             ->join('usuario', 'usuario.documento', '=', 'asignacion_cita.id_usuario')
             ->join('optometra', 'optometra.doc_optometra', '=', 'asignacion_cita.id_optometra')
-            ->join('estado', 'estado.id_estado', '=', 'asignacion_cita.id_estado')
+            ->leftJoin('estado', 'estado.id_estado', '=', 'asignacion_cita.id_estado')
             ->leftJoin('tipo_cita', 'tipo_cita.id_tipo_cita', '=', 'asignacion_cita.id_tipo_cita')
             ->whereRaw($this->esMiNit('asignacion_cita.nit_empresa'), [$this->nitBase()])
             ->select([
                 'asignacion_cita.id_cita', 'asignacion_cita.fecha_cita', 'asignacion_cita.hora_cita',
                 'asignacion_cita.id_estado', 'asignacion_cita.id_usuario',
                 'usuario.nombres', 'usuario.apellido', 'usuario.telefono', 'usuario.email',
-                'estado.nom_estado as estado', 'tipo_cita.nombre_tipo as tipo',
+                DB::raw("COALESCE(estado.nom_estado, CASE asignacion_cita.id_estado WHEN 3 THEN 'Pendiente' WHEN 4 THEN 'Cancelado' WHEN 5 THEN 'Completado' WHEN 11 THEN 'Confirmada' ELSE 'Sin estado' END) as estado"), 'tipo_cita.nombre_tipo as tipo',
                 DB::raw("CONCAT(optometra.nombre, ' ', optometra.apellido) as optometra"),
             ]);
     }
