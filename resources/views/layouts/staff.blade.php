@@ -8,6 +8,9 @@
         $esOptometra = (int) $yo->id_rol === (int) config('visioptica.rol_optometra');
         $nombreOptica = $yo->empresa->nombre ?? 'Óptica Visilux';
 
+        // Mensajes de chat sin leer (insignia del menú).
+        $chatSinLeer = \App\Support\ChatArchivo::totalSinLeer((string) $yo->nit_empresa, (int) $yo->documento);
+
         // Menú según el rol: [ruta, texto, ícono, patrón para marcarlo como activo, insignia]
         if ($esOptometra) {
             $menu = [
@@ -15,6 +18,7 @@
                 ['optometra.agenda', 'Mi agenda', 'calendar', 'optometra.agenda', null],
                 ['optometra.pacientes', 'Mis pacientes', 'users', 'optometra.paciente*', null],
                 ['optometra.horario', 'Mi horario', 'clock', 'optometra.horario', null],
+                ['chat.index', 'Chat con recepción', 'mail', 'chat.*', $chatSinLeer],
             ];
             $panelNombre = 'Panel del optómetra';
         } else {
@@ -28,9 +32,12 @@
                 ['recepcion.pacientes', 'Pacientes', 'users', 'recepcion.paciente*', null],
                 ['recepcion.contacto', 'Por contactar', 'mail', 'recepcion.contacto*', $pendientesContacto],
                 ['recepcion.solicitudes', 'Solicitudes web', 'user-question', 'recepcion.solicitudes', null],
+                ['chat.index', 'Chat con optómetra', 'mail', 'chat.*', $chatSinLeer],
             ];
             $panelNombre = 'Panel de recepción';
         }
+        // Solo enlaces cuyas rutas existen (si falta el panel del optómetra, no se rompe el menú).
+        $menu = array_values(array_filter($menu, fn ($item) => \Illuminate\Support\Facades\Route::has($item[0])));
     @endphp
     <title>@yield('title', $panelNombre) · {{ $nombreOptica }}</title>
     @include('includes.favicon')

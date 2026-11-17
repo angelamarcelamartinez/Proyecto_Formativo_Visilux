@@ -210,3 +210,12 @@ Route::prefix('recepcion')->middleware(['auth', 'cambiar.password', 'rol:4'])->n
     Route::post('/por-contactar/{id}/estado', [$c, 'contactoEstado'])->name('contacto.estado');
     Route::get('/solicitudes', [$c, 'solicitudes'])->name('solicitudes');
 });
+
+// --- Chat interno: recepcionista (4) y optómetra (7) de la misma óptica ---
+Route::prefix('chat')->middleware(['auth', 'cambiar.password', 'rol:4,7'])->name('chat.')->group(function () {
+    $c = \App\Http\Controllers\Staff\ChatController::class;
+
+    Route::get('/', [$c, 'index'])->name('index');
+    Route::post('/{documento}', [$c, 'enviar'])->whereNumber('documento')->name('enviar');
+    Route::get('/{documento}/nuevos', [$c, 'nuevos'])->whereNumber('documento')->name('nuevos');
+});
