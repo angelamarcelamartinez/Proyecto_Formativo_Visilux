@@ -25,13 +25,17 @@ class LoginController extends Controller
     |
     */
 
+    // Trait de Laravel con el login ya hecho (login(), logout(), etc.). Este controlador personaliza partes.
     use AuthenticatesUsers;
 
     /** Intentos fallidos permitidos antes de bloquear el ingreso (1 minuto). */
+    // Límite del limitador de Laravel (4 intentos).
     protected $maxAttempts = 4;
+    // Texto que se muestra cuando la cuenta está inactiva.
     public const MENSAJE_INACTIVO = 'Tu cuenta está inactiva. Comunícate con el administrador de la óptica para que la active.';
 
     /** Usuario al que corresponde el correo del intento actual (null si no existe). */
+    // Guarda al usuario del correo escrito para contar sus fallos.
     protected ?Usuario $usuarioDelIntento = null;
 
     /**
@@ -39,19 +43,24 @@ class LoginController extends Controller
      * el superadmin va a /superadmin, los administradores de cada
      * óptica a /admin y el resto se queda en el sitio público (/).
      */
+    // A dónde ir después de iniciar sesión según el rol.
     protected function redirectTo(): string
     {
+        // Usuario recién logueado.
         $user = auth()->user();
 
+        // Superadmin → /superadmin.
         if ($user && $user->esSuperadmin()) {
             return '/superadmin';
         }
 
         // Contraseña temporal: primero debe crear la suya.
+        // Contraseña temporal → primero /cambiar-password.
         if ($user && $user->debe_cambiar_password) {
             return '/cambiar-password';
         }
 
+        // Administrador → /admin; los demás → /.
         return ($user && $user->esAdministrador()) ? '/admin' : '/';
     }
 
@@ -60,14 +69,19 @@ class LoginController extends Controller
      * secreta. Si alguien prueba sus credenciales aquí, el mensaje es el mismo
      * que el de una contraseña incorrecta.
      */
+    // Se ejecuta cuando se envía el formulario: aquí se decide si las credenciales sirven.
     protected function attemptLogin(Request $request)
     {
         // Usuario dueño del correo escrito (si existe), para contar sus intentos fallidos.
+        // Busca al dueño del correo escrito (si existe).
         $this->usuarioDelIntento = Usuario::where('email', trim((string) $request->input($this->username())))->first();
+        // Atajo.
         $usuario = $this->usuarioDelIntento;
 
         // Cuenta inactiva: no entra aunque la contraseña sea correcta.
+        // Si la cuenta está inactiva (id_estado 2) no entra, aunque la contraseña sea correcta.
         if ($usuario && ! $usuario->esSuperadmin() && BloqueoUsuarios::estaInactivo($usuario)) {
+            // Deja listo el aviso emergente "tu cuenta está inactivada".
             $this->prepararVentanaReactivacion($request, $usuario);
 
             throw ValidationException::withMessages([
@@ -75,10 +89,12 @@ class LoginController extends Controller
             ]);
         }
 
+        // Compara correo y contraseña con la base de datos. Si no coinciden devuelve false (Laravel llamará a sendFailedLoginResponse).
         if (! $this->guard()->attempt($this->credentials($request), $request->boolean('remember'))) {
             return false;
         }
 
+        // El superadmin NO puede entrar por este login: se cierra la sesión y se da el mismo error de siempre.
         if ($this->guard()->user()->esSuperadmin()) {
             $this->guard()->logout();
 
@@ -86,6 +102,7 @@ class LoginController extends Controller
         }
 
         // Entró bien: se reinician sus intentos fallidos.
+        // Entró bien: se reinician los intentos fallidos.
         BloqueoUsuarios::limpiar($this->guard()->user());
 
         return true;
@@ -96,18 +113,23 @@ class LoginController extends Controller
      * Con 3 fallos seguidos y un 4.º también fallido, la cuenta queda inactiva
      * hasta que un administrador la active desde el panel.
      */
+    // Contraseña incorrecta: suma un intento fallido.
     protected function sendFailedLoginResponse(Request $request)
     {
+        // Usuario del correo escrito.
         $usuario = $this->usuarioDelIntento;
 
+        // Correo inexistente o superadmin: solo el mensaje genérico, sin contar intentos.
         if (! $usuario || $usuario->esSuperadmin()) {
             throw ValidationException::withMessages([
                 $this->username() => [trans('auth.failed')],
             ]);
         }
 
+        // Suma el intento. Devuelve cuántos quedan (0 = la cuenta acaba de quedar inactiva).
         $quedan = BloqueoUsuarios::registrarFallo($usuario);
 
+        // Al 4.º fallo: aviso de cuenta inactivada.
         if ($quedan === 0) {
             $this->prepararVentanaReactivacion($request, $usuario);
 
@@ -130,35 +152,43 @@ class LoginController extends Controller
      * haya agregado al carrito como invitada con su carrito real,
      * para que no pierda nada al iniciar sesión.
      */
+    // Laravel la llama justo después de un login correcto.
     protected function authenticated(Request $request, $user)
     {
         // Cuenta desactivada: el superadmin desactiva a los administradores y cada administrador
         // desactiva a los demás usuarios de su óptica.
+        // Si su cuenta está inactiva (2 o 4), cierra la sesión.
         if (in_array((int) $user->id_estado, [2, 4], true)) {
             return self::cerrarSesionCon($request, $user->esAdministrador()
                 ? 'Tu cuenta de administrador está inactiva. Comunícate con VisiOptica para activarla.'
                 : 'Tu cuenta está inactiva. Pide al administrador de tu óptica que la active.');
         }
 
+        // Su óptica.
         $empresa = $user->empresa;
 
+        // El administrador entra aunque la licencia esté vencida (verá la pantalla de renovación).
         if ($user->esAdministrador()) {
             // El administrador entra aunque la licencia haya vencido: verá la pantalla para renovarla.
             // Solo se le cierra la puerta si la óptica no existe, está suspendida o espera su primer pago.
+            // Solo se le cierra la puerta si la óptica está suspendida, pendiente o no existe.
             if (! Licencias::adminPuedeEntrar($empresa)) {
                 return self::cerrarPorLicencia($request, $user);
             }
+        // Empleados y clientes: no entran si la licencia no está vigente.
         } elseif ($empresa && ! Licencias::puedeIngresar($empresa)) {
             // Clientes, recepcionistas, asesores...: no entran mientras la licencia esté inactiva.
             return self::cerrarPorLicenciaInactiva($request, $user);
         }
 
+        // Une el carrito que tenía como invitado con el de su cuenta.
         app(CarritoController::class)->fusionarCarritoInvitado($user->documento);
     }
 
     /**
      * Mensaje para los usuarios que no son administradores cuando la licencia de su óptica no está activa.
      */
+    // Mensaje para empleados/clientes cuando la licencia de su óptica no está vigente.
     public static function cerrarPorLicenciaInactiva(Request $request, $user)
     {
         $nombre = $user->empresa?->nombre ?? 'tu óptica';
@@ -168,6 +198,7 @@ class LoginController extends Controller
     }
 
     /** Cierra la sesión y vuelve al login con un mensaje. */
+    // Cierra la sesión (logout + invalidar sesión + nuevo token) y vuelve al login con un mensaje.
     public static function cerrarSesionCon(Request $request, string $mensaje, ?string $renovarNit = null)
     {
         Auth::logout();
@@ -184,6 +215,7 @@ class LoginController extends Controller
      * Cierra la sesión y vuelve al login explicando por qué no puede entrar.
      * También la usa el middleware VerificarLicencia para sesiones que ya estaban abiertas.
      */
+    // Elige el mensaje según el motivo: sin óptica, suspendida, pendiente de aprobación o licencia vencida.
     public static function cerrarPorLicencia(Request $request, $user)
     {
         $empresa = $user->empresa;
@@ -201,6 +233,7 @@ class LoginController extends Controller
                 . '. Renueva tu plan para volver a entrar; tus datos siguen guardados.';
         }
 
+        // Si la óptica está activa, lo único que falta es pagar: se ofrece renovar.
         // Solo se ofrece renovar cuando lo que falta es pagar.
         return self::cerrarSesionCon($request, $mensaje, ($empresa && $empresa->estado === 'activa') ? $empresa->nit : null);
     }
@@ -209,6 +242,7 @@ class LoginController extends Controller
      * Validación en línea: ¿el correo pertenece a un usuario registrado?
      * El superadmin se trata como "no registrado" porque no entra por este login.
      */
+    // Validación en línea del login: devuelve JSON {existe: true/false}. El superadmin cuenta como "no existe".
     public function verificarEmail(Request $request)
     {
         $email = trim((string) $request->input('email'));
@@ -227,6 +261,7 @@ class LoginController extends Controller
      * El documento queda en la sesión: así la solicitud solo la puede enviar
      * quien acaba de intentar entrar con esa cuenta, no cualquiera con un correo.
      */
+    // Guarda en la sesión el documento para la ventana emergente "cuenta inactivada".
     protected function prepararVentanaReactivacion(Request $request, Usuario $usuario): void
     {
         $request->session()->put('reactivacion_documento', $usuario->documento);
@@ -241,6 +276,7 @@ class LoginController extends Controller
      * Botón "Enviar tu solicitud" de la ventana emergente: le envía un correo
      * al administrador de la óptica pidiendo que active la cuenta.
      */
+    // Antes enviaba la solicitud de activación al administrador (función heredada del flujo anterior).
     public function solicitarReactivacion(Request $request)
     {
         $usuario = Usuario::find($request->session()->get('reactivacion_documento'));
@@ -269,6 +305,7 @@ class LoginController extends Controller
      *
      * @return void
      */
+    // Middlewares: "guest" para todos (excepto logout) y "auth" solo para logout.
     public function __construct()
     {
         $this->middleware('guest')->except('logout');

@@ -8,6 +8,7 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
     <title>{{ config('app.name', 'Laravel') }}</title>
+    @include('includes.favicon')
 
     <!-- Fonts -->
     <link rel="dns-prefetch" href="//fonts.bunny.net">

@@ -75,11 +75,14 @@ class SiteController extends Controller
     /**
      * Vista pública: Planes (Free, Básico, Profesional, Empresarial).
      */
+    // GET /planes: página pública con los planes a la venta.
     public function planes()
     {
         // Los precios salen de la tabla `plan`, que edita el superadmin.
+        // Planes activos ordenados por duración; los precios los edita el superadmin en la tabla plan.
         $planes = \App\Models\Plan::where('activo', 1)->orderBy('meses')->get();
 
+        // Muestra resources/views/planes.blade.php.
         return view('planes', compact('planes'));
     }
 

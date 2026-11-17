@@ -42,9 +42,9 @@ return [
 
         'servicios_titulo' => 'Nuestros Servicios',
         'servicios_subtitulo' => 'Atención especializada para todas las edades',
-        'serv1_titulo' => 'Optometría Infantil',
+        'serv1_titulo' => 'Optometría Pediátrica',
         'serv1_texto' => 'Evaluaciones adaptadas para niños con un enfoque lúdico y profesional que genera confianza.',
-        'serv1_items' => "Examen visual completo\nDetección temprana de problemas\nAsesoría para padres",
+        'serv1_items' => "Examen visual completo\nDetección temprana de problemas visuales\nAsesoría para padres",
         'serv2_titulo' => 'Terapia Visual',
         'serv2_texto' => 'Programas personalizados para mejorar la coordinación ocular, enfoque y rendimiento visual.',
         'serv2_items' => "Ejercicios visuales guiados\nSeguimiento periódico\nEquipos de última generación",
@@ -79,7 +79,7 @@ return [
     'imagenes_por_defecto' => [
         'logo' => 'assets/img/logo-visilux.png',
         'hero_imagen' => 'assets/img/imagen_princi.jpg',
-        'serv1_imagen' => 'assets/img/niños.jpg',
+        'serv1_imagen' => 'assets/img/ninos.jpg',
         'serv2_imagen' => 'assets/img/adultos.jpg',
         'prof_imagen' => 'assets/img/optometra_1.jpg',
     ],

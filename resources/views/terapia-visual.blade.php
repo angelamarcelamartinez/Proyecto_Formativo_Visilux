@@ -1,28 +1,36 @@
 @php $pageTitle = 'Terapia Visual'; @endphp
 @include('includes.header')
 
+
 <!-- ======================================================
      BANNER DE LA PÁGINA
 ====================================================== -->
 <section class="page-header">
+    <span class="ph-ring r1"></span><span class="ph-ring r2"></span><span class="ph-ring r3"></span>
     <div class="container text-center">
-        <span class="page-eyebrow d-block mb-2">Salud visual funcional</span>
-        <h1 class="page-title display-5 mb-3">Terapia Visual</h1>
+        <span class="page-eyebrow mb-3">Salud visual funcional</span>
+        <h1 class="page-title display-4 mb-3">Terapia Visual</h1>
         <p class="page-subtitle mx-auto">
             Programas de rehabilitación y entrenamiento visual diseñados para niños
             y adultos, enfocados en mejorar la coordinación, el enfoque y la calidad
             de vida de nuestros pacientes.
         </p>
+        <div class="ph-chips">
+            <span class="ph-chip"><i class="bi bi-emoji-smile"></i> Niños</span>
+            <span class="ph-chip"><i class="bi bi-person"></i> Adultos</span>
+            <span class="ph-chip"><i class="bi bi-clock"></i> Sesiones de 1 hora</span>
+        </div>
     </div>
 </section>
 
 <!-- ======================================================
      INTRODUCCIÓN
 ====================================================== -->
-<section class="py-5">
+<section class="tv-intro">
     <div class="container">
-        <div class="row justify-content-center text-center mb-5">
+        <div class="row justify-content-center text-center">
             <div class="col-lg-8">
+                <span class="tv-eyebrow">Conoce el método</span>
                 <h2 class="section-title fw-bold">¿Qué es la Terapia Visual?</h2>
                 <p class="text-muted">
                     Es un conjunto de ejercicios y técnicas personalizadas, supervisadas
@@ -32,27 +40,14 @@
                 </p>
             </div>
         </div>
+        <div class="tv-pilares reveal">
+            <div class="tv-pilar"><i class="bi bi-person-check"></i><div><b>Personalizada</b><span>Plan a tu medida</span></div></div>
+            <div class="tv-pilar"><i class="bi bi-eyeglasses"></i><div><b>Supervisada</b><span>Por un optómetra</span></div></div>
+            <div class="tv-pilar"><i class="bi bi-bullseye"></i><div><b>Enfocada</b><span>Coordinación y enfoque</span></div></div>
+            <div class="tv-pilar"><i class="bi bi-people"></i><div><b>Para todos</b><span>Niños y adultos</span></div></div>
+        </div>
     </div>
 </section>
-
-
-<style>
-    /* Sección infantil: colores vivos y figuras geométricas */
-    .ninos-seccion { position: relative; overflow: hidden; background: linear-gradient(180deg, #fff8e1 0%, #e8f7ff 100%); }
-    .ninos-figura { position: absolute; opacity: .28; z-index: 0; pointer-events: none; }
-    .ninos-f1 { top: 28px; left: 6%; font-size: 3rem; color: #ffb300; transform: rotate(-12deg); }
-    .ninos-f2 { top: 120px; right: 8%; font-size: 3.4rem; color: #29b6f6; }
-    .ninos-f3 { bottom: 50px; left: 10%; font-size: 3rem; color: #ef5350; transform: rotate(10deg); }
-    .ninos-f4 { bottom: 70px; right: 6%; font-size: 2.6rem; color: #66bb6a; transform: rotate(14deg); }
-    .ninos-duracion { background: #ffb300; color: #fff; font-weight: 600; padding: .5rem .9rem; }
-    .ninos-card { border-radius: 1.5rem; border-top: 8px solid var(--c) !important; }
-    .ninos-rojo { --c: #ef5350; }
-    .ninos-azul { --c: #29b6f6; }
-    .ninos-amarillo { --c: #ffb300; }
-    .ninos-icono { width: 64px; height: 64px; border-radius: 50% 50% 50% 14px; background: var(--c); color: #fff; font-size: 1.8rem;
-        display: flex; align-items: center; justify-content: center; }
-    .ninos-card h3 { color: var(--c); }
-</style>
 
 <!-- ======================================================
      TERAPIA VISUAL PARA NIÑOS
@@ -64,14 +59,15 @@
     <span class="ninos-figura ninos-f4"><i class="bi bi-square-fill"></i></span>
     <div class="container py-4 position-relative">
         <div class="text-center mb-5">
-            <h2 class="section-title fw-bold">Para Niños</h2>
-            <p class="text-muted mb-2">Un enfoque lúdico que ayuda a detectar y corregir a tiempo</p>
+            <h2 class="section-title fw-bold">Para <span>Niños</span></h2>
+            <p class="text-muted mb-3">Un enfoque lúdico que ayuda a detectar y corregir a tiempo</p>
             <span class="badge rounded-pill ninos-duracion"><i class="bi bi-clock me-1"></i>Cada sesión de terapia dura 1 hora</span>
         </div>
 
-        <div class="row g-4">
+        <div class="row g-4 reveal-grupo">
             <div class="col-lg-4">
-                <div class="card feature-card ninos-card ninos-rojo border-0 shadow-sm h-100 p-4">
+                <div class="card feature-card ninos-card ninos-rojo h-100 p-4">
+                    <span class="ninos-num">01</span>
                     <div class="feature-icon ninos-icono mb-3">
                         <i class="bi bi-eye"></i>
                     </div>
@@ -84,7 +80,8 @@
             </div>
 
             <div class="col-lg-4">
-                <div class="card feature-card ninos-card ninos-azul border-0 shadow-sm h-100 p-4">
+                <div class="card feature-card ninos-card ninos-azul h-100 p-4">
+                    <span class="ninos-num">02</span>
                     <div class="feature-icon ninos-icono mb-3">
                         <i class="bi bi-puzzle"></i>
                     </div>
@@ -97,7 +94,8 @@
             </div>
 
             <div class="col-lg-4">
-                <div class="card feature-card ninos-card ninos-amarillo border-0 shadow-sm h-100 p-4">
+                <div class="card feature-card ninos-card ninos-amarillo h-100 p-4">
+                    <span class="ninos-num">03</span>
                     <div class="feature-icon ninos-icono mb-3">
                         <i class="bi bi-emoji-smile"></i>
                     </div>
@@ -115,16 +113,17 @@
 <!-- ======================================================
      TERAPIA VISUAL PARA ADULTOS
 ====================================================== -->
-<section class="section-services py-5">
-    <div class="container py-4">
+<section class="tv-adultos">
+    <div class="container">
         <div class="text-center mb-5">
+            <span class="tv-eyebrow">Etapa adulta</span>
             <h2 class="section-title fw-bold">Para Adultos</h2>
             <p class="text-muted">Rehabilitación y cuidado visual en cada etapa de la vida</p>
         </div>
 
-        <div class="row g-4">
+        <div class="row g-4 reveal-grupo">
             <div class="col-lg-6">
-                <div class="card feature-card border shadow-sm h-100 p-4">
+                <div class="card feature-card tv-card h-100 p-4 ps-4">
                     <div class="feature-icon feature-icon-blue mb-3">
                         <i class="bi bi-arrow-repeat"></i>
                     </div>
@@ -137,7 +136,7 @@
             </div>
 
             <div class="col-lg-6">
-                <div class="card feature-card border shadow-sm h-100 p-4">
+                <div class="card feature-card tv-card h-100 p-4 ps-4">
                     <div class="feature-icon feature-icon-blue mb-3">
                         <i class="bi bi-laptop"></i>
                     </div>
@@ -155,13 +154,15 @@
 <!-- ======================================================
      LLAMADO A LA ACCIÓN
 ====================================================== -->
-<section class="py-5 text-center">
+<section class="tv-cta">
     <div class="container">
-        <h2 class="section-title fw-bold mb-3">¿Listo para empezar tu terapia visual?</h2>
-        <p class="text-muted mb-4">Agenda una evaluación inicial con nuestra optómetra especializada.</p>
-        <a href="{{ route('citas.create') }}" class="btn btn-gradient btn-lg rounded-pill px-5">
-            <i class="bi bi-calendar-event me-2"></i> Agenda tu Cita
-        </a>
+        <div class="tv-cta-box text-center">
+            <h2 class="section-title fw-bold mb-3">¿Listo para empezar tu terapia visual?</h2>
+            <p class="mb-4">Agenda una evaluación inicial con nuestra optómetra especializada.</p>
+            <a href="{{ route('citas.create') }}" class="btn btn-cta btn-lg rounded-pill px-5">
+                <i class="bi bi-calendar-event me-2"></i> Agenda tu Cita
+            </a>
+        </div>
     </div>
 </section>
 

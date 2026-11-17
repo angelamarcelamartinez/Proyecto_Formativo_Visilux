@@ -1,13 +1,15 @@
 @php $pageTitle = 'Conócenos'; @endphp
 @include('includes.header')
 
+
 <!-- ======================================================
      BANNER DE LA PÁGINA
 ====================================================== -->
 <section class="page-header">
+    <span class="ph-ring r1"></span><span class="ph-ring r2"></span><span class="ph-ring r3"></span>
     <div class="container text-center">
-        <span class="page-eyebrow d-block mb-2">Sobre nosotros</span>
-        <h1 class="page-title display-5 mb-3">Conócenos</h1>
+        <span class="page-eyebrow mb-3">Sobre nosotros</span>
+        <h1 class="page-title display-4 mb-3">Conócenos</h1>
         <p class="page-subtitle mx-auto">
             Más de 15 años cuidando la salud visual de miles de familias, con tecnología
             de punta y un equipo humano comprometido con tu bienestar.
@@ -15,14 +17,23 @@
     </div>
 </section>
 
+<!-- Cifras rápidas -->
+<div class="container cn-stats">
+    <div class="cn-stats-box reveal">
+        <div class="cn-stat"><b>+15</b><span>años de experiencia</span></div>
+        <div class="cn-stat"><b>Miles</b><span>de familias atendidas</span></div>
+        <div class="cn-stat"><b>2030</b><span>meta: líder regional</span></div>
+    </div>
+</div>
+
 <!-- ======================================================
      MISIÓN Y VISIÓN
 ====================================================== -->
 <section class="py-5">
     <div class="container py-4">
-        <div class="row g-4">
+        <div class="row g-4 reveal-grupo">
             <div class="col-md-6">
-                <div class="card feature-card border shadow-sm h-100 p-4">
+                <div class="card feature-card cn-card h-100 p-4">
                     <div class="feature-icon feature-icon-teal mb-3">
                         <i class="bi bi-bullseye"></i>
                     </div>
@@ -37,7 +48,7 @@
             </div>
 
             <div class="col-md-6">
-                <div class="card feature-card border shadow-sm h-100 p-4">
+                <div class="card feature-card cn-card h-100 p-4">
                     <div class="feature-icon feature-icon-blue mb-3">
                         <i class="bi bi-binoculars"></i>
                     </div>
@@ -56,33 +67,40 @@
 <!-- ======================================================
      VALORES
 ====================================================== -->
-<section class="section-services py-5" style="background: var(--bg-mint);">
+<section class="cn-valores">
     <div class="container py-4">
         <div class="text-center mb-5">
+            <span class="cn-eyebrow">Lo que nos define</span>
             <h2 class="section-title fw-bold">Nuestros Valores</h2>
         </div>
 
-        <div class="row g-4 text-center">
+        <div class="row g-4 text-center reveal-grupo">
             <div class="col-md-4">
+                <div class="cn-valor">
                 <div class="feature-icon feature-icon-teal mx-auto mb-3">
                     <i class="bi bi-heart-fill"></i>
                 </div>
                 <h3 class="h5 fw-bold">Calidez Humana</h3>
                 <p class="text-muted">Cada paciente recibe atención cercana y personalizada.</p>
+                </div>
             </div>
             <div class="col-md-4">
+                <div class="cn-valor">
                 <div class="feature-icon feature-icon-blue mx-auto mb-3">
                     <i class="bi bi-shield-check"></i>
                 </div>
                 <h3 class="h5 fw-bold">Excelencia</h3>
                 <p class="text-muted">Procesos clínicos rigurosos y tecnología confiable.</p>
+                </div>
             </div>
             <div class="col-md-4">
+                <div class="cn-valor">
                 <div class="feature-icon feature-icon-teal mx-auto mb-3">
                     <i class="bi bi-award"></i>
                 </div>
                 <h3 class="h5 fw-bold">Compromiso</h3>
                 <p class="text-muted">Acompañamos a nuestros pacientes en todo su proceso.</p>
+                </div>
             </div>
         </div>
     </div>
@@ -91,9 +109,10 @@
 <!-- ======================================================
      MAPA Y FORMULARIO DE CONTACTO
 ====================================================== -->
-<section class="py-5">
+<section class="py-5 cn-contacto">
     <div class="container py-4">
         <div class="text-center mb-5">
+            <span class="cn-eyebrow">Hablemos</span>
             <h2 class="section-title fw-bold">Contáctanos</h2>
             <p class="text-muted">Escríbenos o visítanos, con gusto te atendemos</p>
         </div>
@@ -108,11 +127,11 @@
                     referrerpolicy="no-referrer-when-downgrade">
                 </iframe>
 
-                <ul class="list-unstyled text-muted mt-4">
-                    <li class="mb-2"><i class="bi bi-geo-alt me-2 text-teal"></i> Bogotá, Colombia</li>
-                    <li class="mb-2"><i class="bi bi-telephone me-2 text-teal"></i> +57 300 123 4567</li>
-                    <li><i class="bi bi-envelope me-2 text-teal"></i> info@visioptica.com</li>
-                </ul>
+                <div class="cn-info">
+                    <div class="cn-info-item"><i class="bi bi-geo-alt"></i> Bogotá, Colombia</div>
+                    <div class="cn-info-item"><i class="bi bi-telephone"></i> +57 300 123 4567</div>
+                    <div class="cn-info-item"><i class="bi bi-envelope"></i> info@visioptica.com</div>
+                </div>
             </div>
 
             <!-- Formulario -->
@@ -124,7 +143,7 @@
                     </div>
                 @endif
 
-                <form method="POST" action="{{ route('conocenos.contacto') }}" novalidate data-validar>
+                <form method="POST" action="{{ route('conocenos.contacto') }}" novalidate data-validar class="cn-form">
                     @csrf
 
                     <div class="mb-3">

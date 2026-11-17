@@ -10,32 +10,40 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
+// Panel general del superadmin: pagos por aprobar y cifras clave.
 class DashboardController extends Controller
 {
     /**
      * Panel general: primero los pagos por aprobar y debajo las cifras clave.
      * Las ópticas, los ingresos, la actividad y los avisos están en sus pestañas.
      */
+    // GET /superadmin.
     public function index(): View
     {
         // Mantiene los estados al día aunque no exista el cron todavía.
+        // Actualiza vencimientos antes de contar.
         Licencias::marcarVencidas();
 
         // La vista v_estado_licencias ya trae una fila por óptica con su estado y días restantes.
+        // Vista de la BD con una fila por óptica (estado de licencia y días restantes).
         $opticas = DB::table('v_estado_licencias')->get();
+        // Cuenta cuántas ópticas hay en cada estado.
         $porEstado = $opticas->countBy('estado_licencia');
 
+        // Licencias en estado "pendiente": son los pagos por aprobar (altas nuevas y renovaciones).
         $pendientes = Licencia::with(['empresa', 'plan'])
             ->where('estado', 'pendiente')
             ->orderBy('fecha_solicitud')
             ->get();
 
         // Ingresos del mes en curso según la fecha en que se aprobó el pago.
+        // Suma el valor de lo aprobado en el mes en curso.
         $ingresosMes = (float) Licencia::whereIn('estado', ['activa', 'vencida'])
             ->whereNotNull('fecha_aprobacion')
             ->whereBetween('fecha_aprobacion', [now()->startOfMonth(), now()->endOfMonth()])
             ->sum('valor');
 
+        // Envía las cifras a la vista superadmin/dashboard.blade.php.
         return view('superadmin.dashboard', [
             'totalOpticas' => $opticas->count(),
             'vigentes' => (int) ($porEstado['vigente'] ?? 0),
@@ -50,8 +58,10 @@ class DashboardController extends Controller
      * Hace lo mismo que el comando diario "php artisan licencias:revisar",
      * para poder probarlo o forzarlo sin esperar al cron.
      */
+    // Botón "enviar avisos de vencimiento" (equivale al comando diario licencias:revisar).
     public function enviarAvisos(): RedirectResponse
     {
+        // Envía los correos a las ópticas que están a 30 o 7 días de vencer.
         $r = AvisosLicencia::enviarPendientes();
 
         $mensaje = $r['enviados'] === 0 && $r['errores'] === 0

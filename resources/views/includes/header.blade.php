@@ -6,7 +6,7 @@
     
     <!-- Título dinámico -->
     <title>{{ $pageTitle ?? config('VisiOptica') }} VisiOptica</title>
-    <link rel="icon" type="image/png" href="{{ asset('assets/img/favicon.ico') }}">
+    @include('includes.favicon')
 
     <!-- Fuentes y estilos -->
     <link rel="preconnect" href="https://fonts.googleapis.com">

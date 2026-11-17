@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
+// Panel principal del administrador de una óptica (/admin). Solo muestra datos de SU óptica.
 class DashboardController extends Controller
 {
     public function index(Request $request): View
@@ -16,6 +17,7 @@ class DashboardController extends Controller
         $hoy = now()->toDateString();
 
         // Todo el panel muestra solo los datos de la óptica del usuario conectado.
+        // Filtro de multi-óptica: todas las consultas usan este NIT.
         $nit = Auth::user()->nit_empresa;
 
         // 1) Citas agendadas hoy
@@ -56,6 +58,7 @@ class DashboardController extends Controller
         $controlesPendientes = ControlReminder::proximos(30, Auth::user()->nit_empresa ?? '')->count();
 
         // --- Lista de citas con filtro de rango: día / semana / mes ---
+        // Filtro de la lista de citas: día (por defecto), semana o mes.
         $rango = $request->get('rango', 'dia');
         if (! in_array($rango, ['dia', 'semana', 'mes'], true)) {
             $rango = 'dia';
@@ -92,6 +95,7 @@ class DashboardController extends Controller
                 'estado.nom_estado as estado',
             ]);
 
+        // Entrega todos los datos a la vista del panel.
         return view('admin.dashboard.index', [
             'citasHoy' => $citasHoy,
             'ventasHoy' => $ventasHoy,
