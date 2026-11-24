@@ -11,6 +11,8 @@ use App\Support\CamaraComercio;
 use App\Support\Nit;
 // PagoSimulado: valida la tarjeta y genera la referencia SIM-... (no hay pasarela real).
 use App\Support\PagoSimulado;
+// ApisExternas: departamentos y ciudades de Colombia desde la API (api-colombia.com).
+use App\Support\ApisExternas;
 // RegistroOptica: crea empresa + administrador + licencia pendiente en una transacción.
 use App\Support\RegistroOptica;
 use Illuminate\Http\RedirectResponse;
@@ -33,6 +35,8 @@ class ContratarController extends Controller
         // Muestra resources/views/contratar/create.blade.php enviándole el plan y el título de la pestaña.
         return view('contratar.create', [
             'plan' => $plan,
+            // Lista de departamentos para el <select> (null si la API externa no respondió).
+            'departamentos' => ApisExternas::departamentos(),
             'pageTitle' => 'Contratar ' . $plan->nombre . ' ·',
         ]);
     }
@@ -63,7 +67,21 @@ class ContratarController extends Controller
             'nit' => array_merge(Nit::reglas(), ['unique:empresa,nit']),
             'email' => ['required', 'email', 'max:150'],
             'telefono' => ['required', 'string', 'max:20'],
-            'ciudad' => ['required', 'string', 'max:100'],
+            // Departamento y ciudad: se eligen de las listas de la API; abajo se revisa que la ciudad sea de ese departamento.
+            'departamento' => ['required', 'string', 'max:100', function ($campo, $valor, $falla) {
+                // Si la API responde, el departamento tiene que estar en su lista.
+                if (ApisExternas::departamentos() !== null && ! ApisExternas::buscarDepartamento((string) $valor)) {
+                    $falla('Elige un departamento de la lista.');
+                }
+            }],
+            'ciudad' => ['required', 'string', 'max:100', function ($campo, $valor, $falla) use ($request) {
+                $depto = ApisExternas::buscarDepartamento((string) $request->input('departamento'));
+                $ciudades = $depto ? ApisExternas::ciudades($depto['id']) : null;
+                // Si la API responde, la ciudad tiene que ser una de las del departamento elegido.
+                if ($ciudades !== null && ! in_array(ApisExternas::plano((string) $valor), array_map([ApisExternas::class, 'plano'], $ciudades), true)) {
+                    $falla('Elige una ciudad del departamento seleccionado.');
+                }
+            }],
             'direccion' => ['nullable', 'string', 'max:200'],
             // Documento del administrador: entero único en la tabla usuario (es la llave primaria de usuario).
             'admin_documento' => ['required', 'integer', 'min:1', 'max:2147483647', 'unique:usuario,documento'],
@@ -92,6 +110,7 @@ class ContratarController extends Controller
             'admin_email' => 'correo del administrador', 'admin_telefono' => 'celular', 'tarjeta_titular' => 'nombre en la tarjeta',
             'tarjeta_numero' => 'número de la tarjeta', 'tarjeta_vencimiento' => 'vencimiento', 'tarjeta_cvv' => 'CVV',
             'camara_comercio' => 'certificado de la Cámara de Comercio',
+            'departamento' => 'departamento', 'ciudad' => 'ciudad',
         ]);
 
         // Primero se "cobra"; si la tarjeta falla no se crea nada.

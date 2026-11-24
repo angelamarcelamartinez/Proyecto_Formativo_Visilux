@@ -30,7 +30,7 @@ class Alcance
     protected const VIA = [
         'formula_medica' => [['documento_paciente', 'usuario', 'documento']],
         'carrito' => [['id_usuario', 'usuario', 'documento']],
-        'compra_online' => [['id_usuario', 'usuario', 'documento'], ['id_usuario_nr', 'usuarios_no_registrados', 'id_usuario_nr']],
+        'compra_online' => [['id_usuario', 'usuario', 'documento']],
         'historia_clinica' => [['id_asignacioncita', 'asignacion_cita', 'id_cita']],
         'diagnostico' => [['id_formula', 'formula_medica', 'id_formula']],
         'detalle_formula_medica_medicamento' => [['id_formula', 'formula_medica', 'id_formula']],

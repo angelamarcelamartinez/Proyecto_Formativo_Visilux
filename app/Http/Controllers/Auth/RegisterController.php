@@ -2,7 +2,9 @@
 
 namespace App\Http\Controllers\Auth;
 
+use App\Http\Controllers\CarritoController;
 use App\Http\Controllers\Controller;
+use Illuminate\Http\Request;
 use App\Models\Usuario;
 use Illuminate\Foundation\Auth\RegistersUsers;
 use Illuminate\Support\Facades\Hash;
@@ -96,5 +98,17 @@ class RegisterController extends Controller
         }
 
         return Usuario::create($campos);
+    }
+
+    /**
+     * Después de registrarse la persona ya queda con la sesión iniciada: vuelve a lo que estaba
+     * haciendo (agendar una cita o comprar) en lugar de ir siempre al inicio.
+     */
+    protected function registered(Request $request, $user)
+    {
+        $user->registrarIngreso();
+        app(CarritoController::class)->agregarPendiente($user->documento);
+
+        return redirect()->intended($this->redirectPath());
     }
 }

@@ -100,6 +100,12 @@ class AgendaCitas
             return collect();
         }
 
+        // Los festivos de Colombia no se atienden (API de festivos, app/Support/ApisExternas.php):
+        // ese día no hay turnos, así no se puede agendar ni desde la web ni desde recepción.
+        if (self::esFestivo($fecha)) {
+            return collect();
+        }
+
         $dia = self::nombreDia($fecha);
 
         $bloques = DB::table('horario')
@@ -139,26 +145,6 @@ class AgendaCitas
 
                 return ['opt' => (int) $c->id_optometra, 'ini' => $ini, 'fin' => $ini + self::minutosPorNombre($c->nombre_tipo)];
             });
-
-        // Solicitudes de visitantes (sin cuenta) que siguen pendientes:
-        // también apartan el turno hasta que el administrador las resuelva (pendientes o ya confirmadas por recepción).
-        // El tipo de cita de una solicitud va escrito en el texto del motivo.
-        if (self::solicitudesGuardanTurno()) {
-            $pendiente = self::estadoPendiente();
-            $solicitudes = DB::table('usuarios_no_registrados')
-                ->whereDate('fecha_cita', $fecha->toDateString())
-                ->whereNotNull('hora_cita')
-                ->where(fn ($q) => $q->whereNull('id_estado')->orWhereIn('id_estado', [$pendiente, self::estadoConfirmada()]))
-                ->get(['id_optometra', 'hora_cita', 'motivo_cita'])
-                ->map(function ($c) {
-                    $ini = self::aMinutos($c->hora_cita);
-
-                    return ['opt' => (int) $c->id_optometra, 'ini' => $ini, 'fin' => $ini + self::minutosPorNombre(
-                        preg_match('/— (.+?)\. Prefiere/u', (string) $c->motivo_cita, $m) ? $m[1] : null
-                    )];
-                });
-            $ocupadas = $ocupadas->merge($solicitudes);
-        }
 
         $limiteHoy = $fecha->isToday() ? now()->addMinutes(30)->format('H:i') : null;
 
@@ -201,14 +187,6 @@ class AgendaCitas
             ->values();
     }
 
-    /** ¿La tabla de solicitudes ya tiene las columnas de fecha y hora? (script SQL ejecutado) */
-    public static function solicitudesGuardanTurno(): bool
-    {
-        static $tiene = null;
-
-        return $tiene ??= Schema::hasColumns('usuarios_no_registrados', ['fecha_cita', 'hora_cita', 'id_optometra', 'id_estado']);
-    }
-
     /**
      * ¿Ese turno ya está ocupado por una cita (no cancelada)?
      * Se usa también al crear/editar citas desde el panel.
@@ -233,10 +211,76 @@ class AgendaCitas
             });
     }
 
+    /**
+     * ¿La fecha es festivo? Si la API de festivos no responde se devuelve false (no se bloquea la agenda)
+     * y el calendario muestra el aviso de que no se pudieron consultar los festivos.
+     */
+    public static function esFestivo(Carbon $fecha): bool
+    {
+        return (bool) (ApisExternas::esFestivo($fecha->toDateString())['festivo'] ?? false);
+    }
+
     public static function turnoDisponible(Carbon $fecha, string $hora, int $idOptometra, ?int $idTipoCita = null): bool
     {
         return self::turnosLibres($fecha, $idTipoCita)
             ->contains(fn ($t) => $t['hora'] === $hora && $t['id_optometra'] === $idOptometra);
+    }
+
+    /**
+     * Reglas motivo → tipo de cita: [texto que contiene el nombre del motivo, texto que contiene el nombre del tipo].
+     * Se revisan en orden y gana la primera que coincida (por eso "adaptación" va antes que "control").
+     */
+    protected const TIPO_POR_MOTIVO = [
+        ['adaptaci', 'adaptaci'],
+        ['dolor', 'urgencia'],
+        ['control', 'control'],
+        ['pedi', 'examen visual'],
+        ['fórmula', 'examen visual'],
+        ['formula', 'examen visual'],
+        ['convergencia', 'examen visual'],
+        ['revisi', 'consulta'],
+        ['rutina', 'consulta'],
+    ];
+
+    /** Id del tipo de cita que corresponde a un motivo (el tipo ya no se escoge aparte). */
+    public static function tipoParaMotivo(?int $idMotivo): ?int
+    {
+        if (! $idMotivo) {
+            return null;
+        }
+
+        $motivo = mb_strtolower((string) DB::table('motivos_cita')->where('id_motivo', $idMotivo)->value('nombre_motivo'));
+        if ($motivo === '') {
+            return null;
+        }
+
+        $tipos = DB::table('tipo_cita')->orderBy('id_tipo_cita')->get(['id_tipo_cita', 'nombre_tipo']);
+
+        foreach (self::TIPO_POR_MOTIVO as [$enMotivo, $enTipo]) {
+            if (mb_strpos($motivo, $enMotivo) === false) {
+                continue;
+            }
+            $tipo = $tipos->first(fn ($x) => mb_strpos(mb_strtolower($x->nombre_tipo), $enTipo) !== false);
+            if ($tipo) {
+                return (int) $tipo->id_tipo_cita;
+            }
+        }
+
+        // Sin regla que aplique: consulta general, o el primer tipo que exista.
+        $general = $tipos->first(fn ($x) => mb_strpos(mb_strtolower($x->nombre_tipo), 'consulta') !== false);
+
+        return (int) ($general->id_tipo_cita ?? $tipos->first()->id_tipo_cita ?? 0) ?: null;
+    }
+
+    /** [id_motivo => id_tipo_cita] para que el formulario escoja el tipo apenas se elige el motivo. */
+    public static function mapaTipoPorMotivo(): array
+    {
+        $mapa = [];
+        foreach (DB::table('motivos_cita')->pluck('id_motivo') as $id) {
+            $mapa[(int) $id] = self::tipoParaMotivo((int) $id);
+        }
+
+        return $mapa;
     }
 
     /** Días de la semana en los que hay atención de citas (para orientar al paciente). */

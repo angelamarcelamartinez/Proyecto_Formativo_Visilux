@@ -57,6 +57,8 @@ class RegistroOptica
                 'email' => $datos['email'],
                 'telefono' => $datos['telefono'],
                 'direccion' => $datos['direccion'] ?? null,
+                // Departamento y ciudad elegidos de la API de departamentos de Colombia.
+                'departamento' => $datos['departamento'] ?? null,
                 'ciudad' => $datos['ciudad'],
                 'estado' => 'pendiente',
                 // Todavía no ha usado la prueba gratis.

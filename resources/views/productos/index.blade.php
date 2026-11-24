@@ -34,6 +34,15 @@
             </div>
         @endif
 
+        {{-- Viene del botón "Ver gafas con protección UV" del inicio --}}
+        @if (! empty($filtros['uv']))
+            <div class="alert alert-warning border-0 shadow-sm rounded-4 d-flex flex-wrap align-items-center gap-2">
+                <i class="bi bi-sun-fill"></i>
+                <span>Mostrando <strong>gafas con protección UV</strong>: lentes de sol, polarizados y fotosensibles.</span>
+                <a href="{{ route('productos.index', \Illuminate\Support\Arr::except($filtros, ['uv'])) }}" class="ms-auto btn btn-sm btn-outline-dark rounded-pill">Ver todos los productos</a>
+            </div>
+        @endif
+
         <div class="row g-4">
 
             <!-- ======================================================
@@ -41,6 +50,10 @@
             ====================================================== -->
             <div class="col-lg-3">
                 <form method="GET" action="{{ route('productos.index') }}" class="filtro-card p-4 shadow-sm">
+                    @if (! empty($filtros['uv']))
+                        {{-- Mantiene el filtro de protección UV al usar los demás filtros --}}
+                        <input type="hidden" name="uv" value="1">
+                    @endif
                     <h6 class="fw-semibold mb-3 text-heading"><i class="bi bi-sliders me-1"></i> Filtrar</h6>
 
                     <div class="mb-3">

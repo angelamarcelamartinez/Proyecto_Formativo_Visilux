@@ -31,7 +31,7 @@ class Empresa extends Model
     // Protege contra que alguien envíe por el formulario un campo que no debería poder cambiar.
     protected $fillable = [
         'nit', 'nombre', 'slug', 'email', 'telefono', 'direccion',
-        'ciudad', 'estado', 'prueba_usada', 'fecha_registro',
+        'departamento', 'ciudad', 'estado', 'prueba_usada', 'fecha_registro',
         'camara_comercio',   // Ruta del PDF del certificado de la Cámara de Comercio.
     ];
 

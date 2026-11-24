@@ -118,6 +118,21 @@
                     </div>
                 </div>
             @endforeach
+
+            {{-- Último elemento del menú: sección API (ejercicio independiente) --}}
+            <a href="{{ route('admin.api.index') }}"
+               class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition
+                      {{ request()->routeIs('admin.api.*') ? 'bg-olive-600 text-cream shadow-card' : 'text-ink/80 hover:bg-olive-100' }}">
+                @include('partials.icon', ['name' => 'grid', 'class' => 'w-5 h-5 shrink-0'])
+                API
+            </a>
+
+            <a href="{{ route('admin.triggers.index') }}"
+               class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition
+                      {{ request()->routeIs('admin.triggers.*') ? 'bg-olive-600 text-cream shadow-card' : 'text-ink/80 hover:bg-olive-100' }}">
+                @include('partials.icon', ['name' => 'shield', 'class' => 'w-5 h-5 shrink-0'])
+                Triggers
+            </a>
         </nav>
 
         <div class="p-4 border-t border-olive-100">

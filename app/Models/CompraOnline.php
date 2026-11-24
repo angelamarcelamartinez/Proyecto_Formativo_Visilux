@@ -22,7 +22,6 @@ class CompraOnline extends Model
         'id_usuario',
         'id_estado',
         'id_metodo_compra',
-        'id_usuario_nr',
     ];
 
 
@@ -41,8 +40,4 @@ class CompraOnline extends Model
         return $this->belongsTo(\App\Models\MetodoCompra::class, 'id_metodo_compra', 'id_metodo');
     }
 
-    public function usuariosNoRegistrados()
-    {
-        return $this->belongsTo(\App\Models\UsuariosNoRegistrados::class, 'id_usuario_nr', 'id_usuario_nr');
-    }
 }

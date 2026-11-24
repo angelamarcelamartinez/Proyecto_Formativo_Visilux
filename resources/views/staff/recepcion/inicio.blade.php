@@ -10,9 +10,8 @@
         $nombre = \Illuminate\Support\Str::of(auth()->user()->nombres)->explode(' ')->first();
         $stats = [
             ['calendar-check', $citasHoy->count(), 'Citas de hoy', 'Toda la óptica', 'bg-olive-100 text-olive-700', 'bg-olive-500', route('recepcion.citas', ['desde' => now()->toDateString(), 'hasta' => now()->toDateString()])],
-            ['clock', $porConfirmar, 'Por confirmar', 'Desde hoy en adelante', 'bg-amber-50 text-amber-700', 'bg-amber-500', route('recepcion.citas', ['estado' => 3, 'hasta' => now()->addDays(60)->toDateString()])],
+            ['clock', $porConfirmar, 'Por confirmar', 'Desde hoy en adelante', 'bg-amber-50 text-amber-700', 'bg-amber-500', route('recepcion.citas', ['estado' => 3, 'desde' => now()->toDateString(), 'hasta' => now()->addDays(60)->toDateString()])],
             ['mail', $mensajes, 'Por contactar', 'Mensajes de Contáctanos', 'bg-sky-50 text-sky-700', 'bg-sky-500', route('recepcion.contacto')],
-            ['user-question', $solicitudes, 'Solicitudes web', 'Visitantes sin cuenta', 'bg-rose-50 text-rose-700', 'bg-rose-500', route('recepcion.solicitudes')],
         ];
     @endphp
 
@@ -22,7 +21,7 @@
             <div>
                 <p class="text-[11px] uppercase tracking-[0.2em] text-olive-300">Panel de recepción</p>
                 <h1 class="font-serif text-3xl sm:text-4xl mt-3">{{ $saludo }}, {{ $nombre }}</h1>
-                <p class="mt-3 text-sm text-cream/70 max-w-lg leading-relaxed">Agenda las citas, confirma las pendientes y atiende a quienes escriben desde el sitio.</p>
+                <p class="mt-3 text-sm text-cream/70 max-w-lg leading-relaxed">Agenda las citas, confirma las pendientes y atiende los mensajes que llegan del sitio.</p>
             </div>
             <a href="{{ route('recepcion.cita.nueva') }}"
                class="inline-flex items-center justify-center gap-2 bg-olive-500 hover:bg-olive-600 transition text-cream text-sm font-medium px-5 py-3 rounded-xl shadow-lg shrink-0">
@@ -32,7 +31,7 @@
         </div>
     </div>
 
-    <div class="grid grid-cols-2 xl:grid-cols-4 gap-4 sm:gap-5 mb-8">
+    <div class="grid grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-5 mb-8">
         @foreach ($stats as [$icono, $valor, $texto, $pista, $tono, $barra, $enlace])
             <a href="{{ $enlace }}" class="group relative overflow-hidden bg-white rounded-2xl border border-olive-100 shadow-card p-5 sm:p-6 flex flex-col hover:-translate-y-0.5 hover:border-olive-300 hover:shadow-lg transition duration-200">
                 <span class="absolute inset-x-0 top-0 h-1 {{ $barra }} opacity-80"></span>

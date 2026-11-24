@@ -39,9 +39,6 @@ class AppServiceProvider extends ServiceProvider
                 if ($carrito) {
                     $cantidad = DetalleCarritoProducto::where('id_carrito', $carrito->id_carrito)->sum('cantidad');
                 }
-            } else {
-                // Invitado: el carrito vive en la sesión, como [id_producto => cantidad].
-                $cantidad = array_sum(session('carrito_invitado', []));
             }
 
             $view->with('cartCount', $cantidad);

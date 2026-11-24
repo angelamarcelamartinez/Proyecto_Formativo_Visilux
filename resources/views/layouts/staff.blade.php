@@ -31,7 +31,6 @@
                 ['recepcion.cita.nueva', 'Nueva cita', 'plus', 'recepcion.cita.nueva', null],
                 ['recepcion.pacientes', 'Pacientes', 'users', 'recepcion.paciente*', null],
                 ['recepcion.contacto', 'Por contactar', 'mail', 'recepcion.contacto*', $pendientesContacto],
-                ['recepcion.solicitudes', 'Solicitudes web', 'user-question', 'recepcion.solicitudes', null],
                 ['chat.index', 'Chat con optómetra', 'mail', 'chat.*', $chatSinLeer],
             ];
             $panelNombre = 'Panel de recepción';

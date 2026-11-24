@@ -1,24 +1,16 @@
 @extends('layouts.staff')
 
-@section('title', $solicitud ? 'Agendar solicitud' : 'Nueva cita')
+@section('title', 'Nueva cita')
 @section('breadcrumb')
-    @if ($solicitud)
-        <a href="{{ route('recepcion.solicitudes') }}" class="hover:underline">Solicitudes web</a> / Agendar
-    @else
-        <a href="{{ route('recepcion.citas') }}" class="hover:underline">Citas</a> / Nueva
-    @endif
+    <a href="{{ route('recepcion.citas') }}" class="hover:underline">Citas</a> / Nueva
 @endsection
 
 @section('content')
     @php $campo = 'w-full bg-creamdark/40 border border-olive-100 rounded-xl py-2.5 px-3.5 text-sm focus:outline-none focus:ring-2 focus:ring-olive-300'; @endphp
 
     <div class="mb-6">
-        <h1 class="font-serif text-2xl">{{ $solicitud ? 'Agendar solicitud web' : 'Nueva cita' }}</h1>
-        @if ($solicitud)
-            <p class="text-sm text-muted">Todo viene de lo que la persona pidió en el sitio. Revisa que el horario siga libre y confirma: la cita queda agendada y el optómetra la ve. No hay que registrarla; si quiere entrar al sitio, activa su cuenta con «¿Olvidaste tu contraseña?».</p>
-        @else
-            <p class="text-sm text-muted">Escribe el documento del paciente, elige el tipo de cita y toca uno de los horarios libres. La cita queda confirmada.</p>
-        @endif
+        <h1 class="font-serif text-2xl">Nueva cita</h1>
+        <p class="text-sm text-muted">Escribe el documento del paciente, elige el motivo (el tipo de cita se asigna solo) y toca uno de los horarios libres.</p>
     </div>
 
     @if (session('aviso'))
@@ -31,56 +23,44 @@
         </div>
     @endif
 
-    <form method="POST" action="{{ $solicitud ? route('recepcion.solicitud.guardar', $solicitud->id_usuario_nr) : route('recepcion.cita.guardar') }}" class="max-w-3xl space-y-6">
+    <form method="POST" action="{{ route('recepcion.cita.guardar') }}" class="max-w-3xl space-y-6">
         @csrf
 
         <div class="bg-white rounded-2xl border border-olive-100 shadow-card p-6 sm:p-8 space-y-5">
-            @if ($solicitud)
-                <div class="rounded-xl bg-creamdark/60 border border-olive-100 px-4 py-3 text-sm">
-                    <p class="font-medium">{{ $solicitud->nombre }} <span class="text-xs text-muted font-normal">· Doc. {{ $solicitud->documento }}</span></p>
-                    <p class="text-ink/70">{{ $solicitud->telefono }} · {{ $solicitud->correo }}</p>
-                    @if (! empty($horaPref) && ! empty($fechaInicial))
-                        <p class="text-xs text-muted mt-1">Pidió: {{ \Illuminate\Support\Carbon::parse($fechaInicial)->format('d/m/Y') }} a las {{ $horaPref }}</p>
-                    @endif
-                </div>
-            @else
-                <div>
-                    <label class="block text-sm font-medium mb-1.5" for="n_doc">Documento del paciente <span class="text-red-500">*</span></label>
-                    <input id="n_doc" type="number" name="documento" value="{{ old('documento', $documento) }}" class="{{ $campo }}" required autocomplete="off">
-                    <p id="n_paciente" class="text-sm mt-2 text-muted"></p>
-                    <p class="text-xs text-muted mt-1">¿No está registrado? <a href="{{ route('recepcion.paciente.nuevo') }}" class="text-olive-600 font-semibold hover:underline">Registrar paciente</a></p>
-                </div>
-            @endif
+            <div>
+                <label class="block text-sm font-medium mb-1.5" for="n_doc">Documento del paciente <span class="text-red-500">*</span></label>
+                <input id="n_doc" type="number" name="documento" value="{{ old('documento', $documento) }}" class="{{ $campo }}" required autocomplete="off">
+                <p id="n_paciente" class="text-sm mt-2 text-muted"></p>
+                <p class="text-xs text-muted mt-1">¿No está registrado? <a href="{{ route('recepcion.paciente.nuevo') }}" class="text-olive-600 font-semibold hover:underline">Registrar paciente</a></p>
+            </div>
 
             <div class="grid sm:grid-cols-2 gap-5">
-                <div>
-                    <label class="block text-sm font-medium mb-1.5" for="n_tipo">Tipo de cita <span class="text-red-500">*</span></label>
-                    <select id="n_tipo" name="id_tipo_cita" class="{{ $campo }}" required>
-                        <option value="">Selecciona…</option>
-                        @foreach ($tiposCita as $t)
-                            <option value="{{ $t->id_tipo_cita }}" @selected(old('id_tipo_cita', $tipoSel ?? null) == $t->id_tipo_cita)>{{ $t->nombre_tipo }}</option>
-                        @endforeach
-                    </select>
-                </div>
                 <div>
                     <label class="block text-sm font-medium mb-1.5" for="n_motivo">Motivo <span class="text-red-500">*</span></label>
                     <select id="n_motivo" name="id_motivo" class="{{ $campo }}" required>
                         <option value="">Selecciona…</option>
                         @foreach ($motivos as $m)
-                            <option value="{{ $m->id_motivo }}" @selected(old('id_motivo', $motivoSel ?? null) == $m->id_motivo)>{{ $m->nombre_motivo }}</option>
+                            <option value="{{ $m->id_motivo }}" @selected(old('id_motivo') == $m->id_motivo)>{{ $m->nombre_motivo }}</option>
                         @endforeach
                     </select>
                 </div>
                 <div>
+                    <label class="block text-sm font-medium mb-1.5" for="n_tipo_texto">Tipo de cita</label>
+                    <input id="n_tipo_texto" type="text" class="{{ $campo }}" value="" placeholder="Se asigna según el motivo" readonly tabindex="-1">
+                    <input type="hidden" id="n_tipo" value="">
+                </div>
+                <div>
                     <label class="block text-sm font-medium mb-1.5" for="n_fecha">Fecha <span class="text-red-500">*</span></label>
-                    <input id="n_fecha" type="date" name="fecha" value="{{ old('fecha', $fechaInicial ?? '') }}" min="{{ $fechaMin }}" max="{{ $fechaMax }}" class="{{ $campo }}" required>
+                    <input id="n_fecha" type="text" name="fecha" value="{{ old('fecha') }}" class="{{ $campo }}" placeholder="Elige el día" required autocomplete="off">
+                    {{-- Calendario con los festivos en amarillo y bloqueados --}}
+                    @include('includes.calendario-festivos', ['input' => 'n_fecha'])
                 </div>
                 <div>
                     <label class="block text-sm font-medium mb-1.5" for="n_opt">Optómetra</label>
                     <select id="n_opt" class="{{ $campo }}">
-                        <option value="">Cualquiera</option>
+                        @if ($optometras->count() !== 1) <option value="">Cualquiera</option> @endif
                         @foreach ($optometras as $o)
-                            <option value="{{ $o->doc_optometra }}">{{ $o->nombre }}</option>
+                            <option value="{{ $o->doc_optometra }}" @selected($optometras->count() === 1)>{{ $o->nombre }}</option>
                         @endforeach
                     </select>
                 </div>
@@ -95,13 +75,13 @@
 
             <div>
                 <label class="block text-sm font-medium mb-1.5" for="n_obs">Observaciones</label>
-                <textarea id="n_obs" name="observaciones" rows="2" class="{{ $campo }}">{{ old('observaciones', $obsInicial ?? '') }}</textarea>
+                <textarea id="n_obs" name="observaciones" rows="2" class="{{ $campo }}">{{ old('observaciones') }}</textarea>
             </div>
         </div>
 
         <div class="flex items-center gap-3">
-            <button type="submit" class="bg-olive-600 hover:bg-olive-700 transition text-cream text-sm font-medium px-5 py-2.5 rounded-xl shadow-card">{{ $solicitud ? 'Confirmar cita' : 'Agendar cita' }}</button>
-            <a href="{{ $solicitud ? route('recepcion.solicitudes') : route('recepcion.citas') }}" class="text-sm text-ink/60 hover:text-ink">Cancelar</a>
+            <button type="submit" class="bg-olive-600 hover:bg-olive-700 transition text-cream text-sm font-medium px-5 py-2.5 rounded-xl shadow-card">Agendar cita</button>
+            <a href="{{ route('recepcion.citas') }}" class="text-sm text-ink/60 hover:text-ink">Cancelar</a>
         </div>
     </form>
 @endsection
@@ -133,9 +113,14 @@
         if ($('n_doc').value) buscarPaciente();
     }
 
-    // Turno que la persona pidió en el sitio (solo cuando se agenda desde «Solicitudes web»)
-    const pedido = @json(['hora' => $horaPref ?? null, 'opt' => isset($optPref) && $optPref ? (int) $optPref : null]);
-    let aplicarPedido = !!pedido.hora;
+    // El tipo de cita lo decide el motivo (mismo criterio que usa el servidor al guardar).
+    const tipoPorMotivo = @json($tipoPorMotivo);
+    const nombreTipo = @json($tiposCita->map(fn ($x) => $x->nombre_tipo));
+    function ajustarTipo() {
+        const id = tipoPorMotivo[$('n_motivo').value] || '';
+        $('n_tipo').value = id;
+        $('n_tipo_texto').value = id ? (nombreTipo[id] || '') : '';
+    }
 
     // Horarios libres de la fecha (los calcula el sitio con el horario de cada optómetra y las citas ya tomadas)
     function cargarTurnos() {
@@ -163,21 +148,12 @@
                     b.dataset.hora = x.hora; b.dataset.opt = x.id_optometra;
                     caja.appendChild(b);
                 });
-                if (aplicarPedido) {
-                    aplicarPedido = false;
-                    const igual = Array.from(caja.querySelectorAll('button')).find(o => o.dataset.hora === pedido.hora && (!pedido.opt || parseInt(o.dataset.opt, 10) === pedido.opt));
-                    if (igual) { igual.click(); }
-                    else {
-                        const nota = document.createElement('p');
-                        nota.className = 'w-full text-sm text-amber-700';
-                        nota.textContent = 'El turno que pidió (' + pedido.hora + ') ya no está libre. Escoge otro.';
-                        caja.prepend(nota);
-                    }
-                }
             })
             .catch(() => { caja.innerHTML = '<p class="text-sm text-rose-700">No se pudieron cargar los horarios.</p>'; });
     }
-    ['n_fecha', 'n_tipo', 'n_opt'].forEach(id => $(id).addEventListener('change', cargarTurnos));
+    $('n_motivo').addEventListener('change', () => { ajustarTipo(); cargarTurnos(); });
+    ['n_fecha', 'n_opt'].forEach(id => $(id).addEventListener('change', cargarTurnos));
+    ajustarTipo();
     if ($('n_fecha').value) cargarTurnos();
 })();
 </script>

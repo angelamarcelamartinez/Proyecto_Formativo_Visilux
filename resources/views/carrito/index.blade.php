@@ -16,13 +16,6 @@
             </div>
         @endif
 
-        @guest
-            <div class="alert alert-light border shadow-sm rounded-4 small">
-                <i class="bi bi-info-circle"></i> Estás comprando como invitado. Tus productos se guardan en este navegador
-                y no se pierden si decides iniciar sesión más adelante.
-            </div>
-        @endguest
-
         @if ($detalles->isEmpty())
             <div class="text-center py-5">
                 <i class="bi bi-cart-x display-1 text-muted"></i>
@@ -94,11 +87,7 @@
                         <form method="POST" action="{{ route('carrito.finalizar') }}">
                             @csrf
                             <button type="submit" class="btn btn-gradient rounded-pill w-100 mb-2">
-                                @guest
-                                    <i class="bi bi-box-arrow-in-right me-1"></i> Iniciar sesión para continuar
-                                @else
-                                    <i class="bi bi-credit-card me-1"></i> Finalizar compra
-                                @endguest
+                                <i class="bi bi-credit-card me-1"></i> Finalizar compra
                             </button>
                         </form>
 

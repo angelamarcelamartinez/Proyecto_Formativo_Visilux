@@ -39,6 +39,17 @@ class ProductoController extends Controller
         if ($request->filled('precio_max')) {
             $query->where('precio', '<=', $request->get('precio_max'));
         }
+        // Gafas con protección UV (viene del botón de la sección de rayos UV del inicio: /productos?uv=1).
+        // No hay una columna "uv" en producto, así que se toman los lentes de sol (categoría 2)
+        // y los productos cuyo nombre o descripción hablan de filtro UV, polarizado o fotosensible.
+        if ($request->boolean('uv')) {
+            $query->where(function ($q) {
+                $q->where('id_categoria', 2);
+                foreach (['%UV%', '%polariz%', '%fotosens%', '%transitions%'] as $palabra) {
+                    $q->orWhere('nombre_producto', 'like', $palabra)->orWhere('descripcion', 'like', $palabra);
+                }
+            });
+        }
 
         // Orden: más recientes primero, o por precio si el usuario lo pide
         switch ($request->get('orden')) {
@@ -67,7 +78,7 @@ class ProductoController extends Controller
             'marcas' => $marcas,
             'categorias' => $categorias,
             'tipos' => $tipos,
-            'filtros' => $request->only(['buscar', 'marca', 'categoria', 'tipo', 'precio_min', 'precio_max', 'orden']),
+            'filtros' => $request->only(['buscar', 'marca', 'categoria', 'tipo', 'precio_min', 'precio_max', 'orden', 'uv']),
             'pageTitle' => 'Productos',
         ]);
     }

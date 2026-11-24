@@ -145,4 +145,13 @@ class Usuario extends Authenticatable
     {
         return $this->belongsTo(\App\Models\Ciudad::class, 'id_ciudad', 'id_ciudad');
     }
+
+    /**
+     * Marca el ingreso: guarda la fecha y hora en ultimo_acceso. El trigger trg_log_acceso
+     * (database/sql/2026_11_23_bitacora_triggers.sql) copia ese cambio a la tabla log_acceso.
+     */
+    public function registrarIngreso(): void
+    {
+        static::whereKey($this->getKey())->update(['ultimo_acceso' => now()]);
+    }
 }

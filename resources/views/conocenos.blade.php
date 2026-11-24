@@ -160,7 +160,7 @@
                         <label for="correo" class="form-label fw-medium">Correo electrónico</label>
                         <input type="email"
                                class="form-control @error('correo') is-invalid @enderror"
-                               id="correo" name="correo" value="{{ old('correo') }}" maxlength="150" data-v="email" required>
+                               id="correo" name="correo" value="{{ old('correo') }}" maxlength="50" data-v="email" required>
                         @error('correo')
                             <span class="invalid-feedback d-block">{{ $message }}</span>
                         @enderror

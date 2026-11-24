@@ -63,6 +63,9 @@ class SuperadminLoginController extends Controller
                 // Cambia el identificador de sesión (evita el robo de sesión).
                 $request->session()->regenerate();
 
+                // Bitácora de accesos (el trigger trg_log_acceso copia este cambio a log_acceso).
+                Auth::user()->registrarIngreso();
+
                 // Va a la página que quería abrir, o al panel del superadmin.
                 return redirect()->intended(route('superadmin.dashboard'));
             }

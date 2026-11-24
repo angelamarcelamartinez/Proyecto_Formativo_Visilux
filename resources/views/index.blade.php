@@ -212,6 +212,12 @@
 </section>
 
 <!-- ======================================================
+     RAYOS UV: índice actual (API open-meteo.com, app/Support/ApisExternas.php)
+     y por qué usar gafas con protección UV. El botón lleva al catálogo filtrado (/productos?uv=1).
+====================================================== -->
+@include('includes.rayos-uv', ['uv' => $uv ?? null])
+
+<!-- ======================================================
      PERFIL PROFESIONAL
 ====================================================== -->
 <section class="ini-doctor" id="nosotros">

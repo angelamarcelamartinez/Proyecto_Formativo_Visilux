@@ -3,6 +3,8 @@
 // Clase de apoyo (app/Support): funciones estáticas reutilizables, no es un modelo ni un controlador.
 namespace App\Support;
 
+use Illuminate\Support\Facades\Schema;
+
 /**
  * NIT de persona jurídica en Colombia: 9 dígitos + 1 dígito de verificación (DV).
  *
@@ -52,5 +54,33 @@ class Nit
             "{$campo}.required" => 'Escribe el NIT.',
             "{$campo}.digits" => 'El NIT debe tener 9 dígitos, guion y el dígito de verificación (ej. 800197268-4).',
         ];
+    }
+
+    /**
+     * Valor del NIT listo para guardarlo en una columna concreta, porque cada tabla lo guarda de una forma:
+     * texto ('900000000-1'), BIGINT (9000000001) o INT (900000000: no cabe el dígito de verificación).
+     * Así un NIT de 10 dígitos nunca revienta una columna INT.
+     */
+    public static function paraColumna(string $tabla, string $columna, int|string|null $nit): int|string|null
+    {
+        $digitos = self::normalizar((string) $nit);
+        if ($digitos === '') {
+            return null;
+        }
+
+        try {
+            $tipo = strtolower((string) Schema::getColumnType($tabla, $columna));
+        } catch (\Throwable) {
+            $tipo = '';
+        }
+
+        if (in_array($tipo, ['int', 'integer', 'mediumint', 'smallint', 'tinyint', 'int4'], true)) {
+            return (int) substr($digitos, 0, 9);
+        }
+        if (in_array($tipo, ['bigint', 'int8'], true)) {
+            return (int) $digitos;
+        }
+
+        return strlen($digitos) === 10 ? self::formatear($digitos) : $digitos;
     }
 }

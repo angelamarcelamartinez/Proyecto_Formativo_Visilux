@@ -30,8 +30,8 @@
             <label class="block text-xs font-medium mb-1" for="f_estado">Estado</label>
             <select id="f_estado" name="estado" class="{{ $campo }}">
                 <option value="">Todos</option>
-                @foreach ($estados as $e)
-                    <option value="{{ $e->id_estado }}" @selected($estadoSel == $e->id_estado)>{{ $e->nom_estado }}</option>
+                @foreach ($estados as $id => $nom)
+                    <option value="{{ $id }}" @selected((string) $estadoSel === (string) $id)>{{ $nom }}</option>
                 @endforeach
             </select>
         </div>
@@ -45,11 +45,16 @@
             </select>
         </div>
         <div>
-            <label class="block text-xs font-medium mb-1" for="f_q">Paciente</label>
-            <input id="f_q" type="text" name="q" value="{{ $q }}" placeholder="Documento o nombre" class="{{ $campo }}">
+            <label class="block text-xs font-medium mb-1" for="f_doc">Documento</label>
+            <input id="f_doc" type="text" inputmode="numeric" name="documento" value="{{ $documento }}" placeholder="Número" class="{{ $campo }} w-36">
+        </div>
+        <div>
+            <label class="block text-xs font-medium mb-1" for="f_nom">Nombre</label>
+            <input id="f_nom" type="text" name="nombre" value="{{ $nombre }}" placeholder="Nombre o apellido" class="{{ $campo }}">
         </div>
         <button type="submit" class="bg-olive-600 hover:bg-olive-700 transition text-cream text-sm font-medium px-5 py-2.5 rounded-xl shadow-card">Filtrar</button>
         <a href="{{ route('recepcion.citas') }}" class="text-sm text-ink/60 hover:text-ink py-2.5">Limpiar</a>
+        <a href="{{ route('recepcion.citas.exportar', request()->query()) }}" class="ml-auto inline-flex items-center gap-2 border border-olive-300 text-olive-700 hover:bg-olive-100 transition text-sm font-medium px-4 py-2.5 rounded-xl">Descargar Excel</a>
     </form>
 
     <div class="bg-white rounded-2xl border border-olive-100 shadow-card overflow-hidden">

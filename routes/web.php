@@ -40,6 +40,9 @@ Route::post('/renovar', [\App\Http\Controllers\RenovarController::class, 'store'
 Route::get('/planes/{plan}/contratar', [ContratarController::class, 'create'])->name('contratar.create');
 Route::post('/planes/{plan}/contratar', [ContratarController::class, 'store'])->name('contratar.store');
 Route::get('/planes/solicitud-enviada', [ContratarController::class, 'enviado'])->name('contratar.enviado');
+// Ciudades de un departamento (API de departamentos de Colombia) para el formulario de contratar.
+Route::get('/api-externa/departamentos/{id}/ciudades', [\App\Http\Controllers\ApiExternaController::class, 'ciudades'])
+    ->whereNumber('id')->name('api-externa.ciudades');
 Route::get('/agendar-cita', [SiteController::class, 'agendarCita'])->name('citas.create');
 Route::get('/agendar-cita/horarios', [SiteController::class, 'horariosDisponibles'])->name('citas.horarios');
 Route::post('/agendar-cita', [SiteController::class, 'guardarCita'])->name('citas.store');
@@ -174,6 +177,10 @@ Route::prefix('admin')->middleware(['auth', 'cambiar.password', 'admin', 'licenc
     // "Por contactar": marcar un mensaje de Contáctanos como contactado (o volverlo a pendiente)
     Route::post('/por-contactar/{id}/estado', [\App\Http\Controllers\Admin\ContactoController::class, 'estado'])->name('contacto.estado');
 
+    // Sección "API" (ejercicio independiente: muestra las APIs de public/apis). Va ANTES del CRUD genérico para que /admin/api no se lea como una tabla.
+    Route::get('/api', [\App\Http\Controllers\Admin\ApiController::class, 'index'])->name('api.index');
+    Route::get('/triggers', [\App\Http\Controllers\Admin\ApiController::class, 'triggers'])->name('triggers.index');
+
     // CRUD genérico
     // Autocompletar datos del paciente por documento (citas, fórmulas médicas)
     Route::get('/buscar-usuario', [CrudController::class, 'buscarUsuario'])->name('buscar-usuario');
@@ -195,6 +202,7 @@ Route::prefix('recepcion')->middleware(['auth', 'cambiar.password', 'rol:4'])->n
 
     // Citas de toda la óptica: ver, confirmar, cancelar y agendar nuevas
     Route::get('/citas', [$c, 'citas'])->name('citas');
+    Route::get('/citas/exportar', [$c, 'exportarCitas'])->name('citas.exportar');
     Route::get('/citas/nueva', [$c, 'nuevaCita'])->name('cita.nueva');
     Route::post('/citas', [$c, 'guardarCita'])->name('cita.guardar');
     Route::post('/citas/{id}/estado', [$c, 'estadoCita'])->name('cita.estado');
@@ -205,13 +213,9 @@ Route::prefix('recepcion')->middleware(['auth', 'cambiar.password', 'rol:4'])->n
     Route::get('/pacientes/nuevo', [$c, 'nuevoPaciente'])->name('paciente.nuevo');
     Route::post('/pacientes', [$c, 'guardarPaciente'])->name('paciente.guardar');
 
-    // Mensajes de "Contáctanos" y solicitudes de visitantes
+    // Mensajes de "Contáctanos"
     Route::get('/por-contactar', [$c, 'contacto'])->name('contacto');
     Route::post('/por-contactar/{id}/estado', [$c, 'contactoEstado'])->name('contacto.estado');
-    Route::get('/solicitudes', [$c, 'solicitudes'])->name('solicitudes');
-    Route::post('/solicitudes/{id}/registrar', [$c, 'solicitudRegistrar'])->name('solicitud.registrar');
-    Route::get('/solicitudes/{id}/agendar', [$c, 'solicitudAgendar'])->name('solicitud.agendar');
-    Route::post('/solicitudes/{id}/agendar', [$c, 'solicitudGuardar'])->name('solicitud.guardar');
 });
 
 // --- Chat interno: recepcionista (4) y optómetra (7) de la misma óptica ---

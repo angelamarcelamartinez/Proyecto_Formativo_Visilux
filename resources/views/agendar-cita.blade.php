@@ -39,14 +39,10 @@
                     </div>
                 @endif
 
-                @if (session('cita_enviada'))
-                    @php $c = session('cita_enviada'); @endphp
-                    <div class="alert alert-success border-0 shadow-sm p-4 mb-4">
-                        <h5 class="fw-semibold mb-2"><i class="bi bi-envelope-check me-2"></i>¡Recibimos tu solicitud!</h5>
-                        <p class="mb-0">
-                            Pediste {{ mb_strtolower($c['tipo']) }} el <strong>{{ $c['fecha'] }}</strong> a las
-                            <strong>{{ $c['hora'] }}</strong> con {{ $c['optometra'] }}. Te contactaremos para confirmarla.
-                        </p>
+                @if (session('cita_recuperada'))
+                    <div class="alert alert-info border-0 shadow-sm p-3 mb-4 small">
+                        <i class="bi bi-info-circle me-1"></i>
+                        Ya iniciaste sesión: revisa lo que habías escogido y pulsa <strong>Reservar cita</strong> para terminar.
                     </div>
                 @endif
 
@@ -71,8 +67,8 @@
                     <div class="alert alert-light border shadow-sm d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
                         <span>
                             <i class="bi bi-info-circle me-1"></i>
-                            <strong>¿Ya tienes cuenta?</strong> Inicia sesión y tu cita queda reservada al instante.
-                            Si no, envía tu solicitud y te confirmamos por teléfono o correo.
+                            <strong>Para reservar necesitas una cuenta.</strong> Escoge tu motivo, día y hora; al enviar te pedimos
+                            iniciar sesión o registrarte y tu cita queda guardada.
                         </span>
                         <span class="d-flex gap-2">
                             <a href="{{ route('login') }}" class="btn btn-sm btn-gradient rounded-pill px-3">Iniciar sesión</a>
@@ -85,67 +81,18 @@
                     <form method="POST" action="{{ route('citas.store') }}" id="form-cita" novalidate data-validar>
                         @csrf
 
-                        {{-- 1. Datos de la persona --}}
-                        <h5 class="fw-semibold mb-3"><span class="badge rounded-pill bg-dark me-2">1</span>Tus datos</h5>
-
+                        {{-- 1. Datos de la persona (solo con sesión iniciada) --}}
                         @auth
+                            <h5 class="fw-semibold mb-3"><span class="badge rounded-pill bg-dark me-2">1</span>Tus datos</h5>
                             <div class="bg-light rounded-3 p-3 mb-4 small">
                                 <div><strong>{{ $usuario->nombres }} {{ $usuario->apellido }}</strong></div>
                                 <div class="text-muted">Documento {{ $usuario->documento }} · {{ $usuario->email }} · {{ $usuario->telefono }}</div>
                             </div>
-                        @else
-                            <div class="row g-3 mb-4">
-                                <div class="col-md-6">
-                                    <label for="nombre" class="form-label fw-medium">Nombre completo</label>
-                                    <input type="text" class="form-control @error('nombre') is-invalid @enderror"
-                                           id="nombre" name="nombre" value="{{ old('nombre') }}" maxlength="100" data-v="nombre" required>
-                                    @error('nombre') <span class="invalid-feedback d-block">{{ $message }}</span> @enderror
-                                </div>
-                                <div class="col-md-6">
-                                    <label for="id_tipo_docu" class="form-label fw-medium">Tipo de documento</label>
-                                    <select class="form-select @error('id_tipo_docu') is-invalid @enderror" id="id_tipo_docu" name="id_tipo_docu" required>
-                                        <option value="" disabled {{ old('id_tipo_docu') ? '' : 'selected' }}>Selecciona</option>
-                                        @foreach ($tiposDocumento as $td)
-                                            <option value="{{ $td->id_tipo_docu }}" @selected((string) old('id_tipo_docu') === (string) $td->id_tipo_docu)>{{ $td->nom_ti_docu }}</option>
-                                        @endforeach
-                                    </select>
-                                    @error('id_tipo_docu') <span class="invalid-feedback d-block">{{ $message }}</span> @enderror
-                                </div>
-                                <div class="col-md-6">
-                                    <label for="documento" class="form-label fw-medium">Número de documento</label>
-                                    <input type="text" inputmode="numeric" class="form-control @error('documento') is-invalid @enderror"
-                                           id="documento" name="documento" value="{{ old('documento') }}" maxlength="15" data-v="documento" data-v-tipo="#id_tipo_docu" required>
-                                    @error('documento') <span class="invalid-feedback d-block">{{ $message }}</span> @enderror
-                                </div>
-                                <div class="col-md-6">
-                                    <label for="telefono" class="form-label fw-medium">Teléfono</label>
-                                    <input type="tel" class="form-control @error('telefono') is-invalid @enderror"
-                                           id="telefono" name="telefono" value="{{ old('telefono') }}" maxlength="10" placeholder="300 123 4567" data-v="telefono" required>
-                                    @error('telefono') <span class="invalid-feedback d-block">{{ $message }}</span> @enderror
-                                </div>
-                                <div class="col-12">
-                                    <label for="correo" class="form-label fw-medium">Correo electrónico</label>
-                                    <input type="email" class="form-control @error('correo') is-invalid @enderror"
-                                           id="correo" name="correo" value="{{ old('correo') }}" maxlength="100" data-v="email" required>
-                                    @error('correo') <span class="invalid-feedback d-block">{{ $message }}</span> @enderror
-                                </div>
-                            </div>
                         @endauth
 
-                        {{-- 2. Tipo y motivo --}}
-                        <h5 class="fw-semibold mb-3"><span class="badge rounded-pill bg-dark me-2">2</span>¿Qué necesitas?</h5>
+                        {{-- 2. Motivo (el tipo de cita sale del motivo) --}}
+                        <h5 class="fw-semibold mb-3"><span class="badge rounded-pill bg-dark me-2">@auth 2 @else 1 @endauth</span>¿Qué necesitas?</h5>
                         <div class="row g-3 mb-4">
-                            <div class="col-md-6">
-                                <label for="id_tipo_cita" class="form-label fw-medium">Tipo de cita</label>
-                                <select class="form-select @error('id_tipo_cita') is-invalid @enderror" id="id_tipo_cita" name="id_tipo_cita" required>
-                                    <option value="" disabled {{ old('id_tipo_cita') ? '' : 'selected' }}>Selecciona</option>
-                                    @foreach ($tiposCita as $tc)
-                                        <option value="{{ $tc->id_tipo_cita }}" @selected((string) old('id_tipo_cita') === (string) $tc->id_tipo_cita)>{{ $tc->nombre_tipo }}</option>
-                                    @endforeach
-                                </select>
-                                @error('id_tipo_cita') <span class="invalid-feedback d-block">{{ $message }}</span> @enderror
-                                <div class="form-text">Las citas duran 30 minutos; las terapias, 1 hora.</div>
-                            </div>
                             <div class="col-md-6">
                                 <label for="id_motivo" class="form-label fw-medium">Motivo de la cita</label>
                                 <select class="form-select @error('id_motivo') is-invalid @enderror" id="id_motivo" name="id_motivo" required>
@@ -156,16 +103,23 @@
                                 </select>
                                 @error('id_motivo') <span class="invalid-feedback d-block">{{ $message }}</span> @enderror
                             </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-medium">Tipo de cita</label>
+                                <div class="form-control bg-light" id="tipo_cita_texto" aria-live="polite">Se elige solo según el motivo</div>
+                                <input type="hidden" id="id_tipo_cita" value="">
+                                <div class="form-text">Las citas duran 30 minutos; las terapias, 1 hora.</div>
+                            </div>
                         </div>
 
                         {{-- 3. Día y hora --}}
-                        <h5 class="fw-semibold mb-3"><span class="badge rounded-pill bg-dark me-2">3</span>Día y hora</h5>
+                        <h5 class="fw-semibold mb-3"><span class="badge rounded-pill bg-dark me-2">@auth 3 @else 2 @endauth</span>Día y hora</h5>
                         <div class="row g-3 mb-2">
                             <div class="col-md-6">
                                 <label for="fecha" class="form-label fw-medium">Fecha</label>
-                                <input type="date" class="form-control @error('fecha') is-invalid @enderror"
-                                       id="fecha" name="fecha" value="{{ old('fecha') }}"
-                                       min="{{ $fechaMin }}" max="{{ $fechaMax }}" required>
+                                <input type="text" class="form-control @error('fecha') is-invalid @enderror"
+                                       id="fecha" name="fecha" value="{{ old('fecha') }}" placeholder="Elige el día" required autocomplete="off">
+                                {{-- Calendario con los festivos en amarillo y bloqueados --}}
+                                @include('includes.calendario-festivos', ['input' => 'fecha'])
                                 @error('fecha') <span class="invalid-feedback d-block">{{ $message }}</span> @enderror
                             </div>
                             <div class="col-md-6 d-flex align-items-end">
@@ -197,7 +151,7 @@
 
                         <button type="submit" id="btn-cita" class="btn btn-gradient rounded-pill px-4 mt-4" disabled>
                             <i class="bi bi-calendar-check me-2"></i>
-                            @auth Reservar cita @else Enviar solicitud @endauth
+                            @auth Reservar cita @else Continuar para reservar @endauth
                         </button>
                         <p class="small text-muted mt-2 mb-0" id="ayuda-boton">Escoge un horario para continuar.</p>
                     </form>
@@ -207,15 +161,21 @@
     </div>
 </section>
 
-<style>
-    .turno-btn { min-width: 150px; text-align: left; }
-    .turno-btn.active { background: var(--gold); border-color: var(--gold); color: #fff; }
-</style>
-
 <script>
 (function () {
     const fecha = document.getElementById('fecha');
+    const motivo = document.getElementById('id_motivo');
     const tipo = document.getElementById('id_tipo_cita');
+    const tipoTexto = document.getElementById('tipo_cita_texto');
+    // [id_motivo => id_tipo_cita] y [id_tipo_cita => nombre]: el tipo sale del motivo, no se escoge aparte.
+    const tipoPorMotivo = @json($tipoPorMotivo);
+    const nombreTipo = @json($tiposCita->map->nombre_tipo);
+
+    function ajustarTipo() {
+        const id = tipoPorMotivo[motivo.value] || '';
+        tipo.value = id;
+        tipoTexto.textContent = id ? (nombreTipo[id] || '') : 'Se elige solo según el motivo';
+    }
     const cont = document.getElementById('turnos');
     const hora = document.getElementById('hora');
     const opt = document.getElementById('id_optometra');
@@ -237,7 +197,7 @@
         if (!fecha.value) return;
         if (!conservar) seleccionar('', '');
         if (!tipo.value) {
-            cont.innerHTML = '<div class="alert alert-info small mb-0">Primero escoge el tipo de cita para ver los horarios disponibles.</div>';
+            cont.innerHTML = '<div class="alert alert-info small mb-0">Primero escoge el motivo de la cita para ver los horarios disponibles.</div>';
             seleccionar('', '');
             return;
         }
@@ -271,10 +231,11 @@
         if (b) seleccionar(b.dataset.hora, b.dataset.opt);
     });
     fecha.addEventListener('change', () => cargar(false));
-    // La duración depende del tipo de cita (terapia = 1 hora), así que se recalculan los turnos
-    tipo.addEventListener('change', () => cargar(false));
+    // Al cambiar el motivo cambia el tipo de cita y, con él, la duración: se recalculan los turnos
+    motivo.addEventListener('change', () => { ajustarTipo(); cargar(false); });
 
-    // Si el formulario volvió con errores, se recargan los horarios de la fecha escogida
+    // Si el formulario volvió con errores (o con lo que ya había escogido), se recargan los horarios de la fecha escogida
+    ajustarTipo();
     if (fecha.value) cargar(true);
 })();
 </script>

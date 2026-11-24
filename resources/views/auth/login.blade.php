@@ -52,6 +52,13 @@
                     </div>
                 @endif
 
+                <!-- AVISO: hay que iniciar sesión (o registrarse) para agendar una cita o comprar -->
+                @if (session('info'))
+                    <div class="alert alert-info py-2 small" role="alert">
+                        <i class="bi bi-info-circle me-1"></i> {{ session('info') }}
+                    </div>
+                @endif
+
                 <!-- ÓPTICA SIN LICENCIA VIGENTE O SUSPENDIDA -->
                 @if ($bloqueo = session('licencia_bloqueada'))
                     <div class="alert alert-warning small" role="alert">

@@ -181,8 +181,11 @@ class LoginController extends Controller
             return self::cerrarPorLicenciaInactiva($request, $user);
         }
 
-        // Une el carrito que tenía como invitado con el de su cuenta.
-        app(CarritoController::class)->fusionarCarritoInvitado($user->documento);
+        // Bitácora de accesos: guarda la fecha y hora del ingreso (el trigger lo copia a log_acceso).
+        $user->registrarIngreso();
+
+        // Si antes de entrar quiso agregar un producto al carrito, se agrega ahora.
+        app(CarritoController::class)->agregarPendiente($user->documento);
     }
 
     /**

@@ -78,12 +78,30 @@
                                 <input type="tel" id="telefono" name="telefono" value="{{ old('telefono') }}" class="{{ $campo('telefono') }}" maxlength="10" placeholder="601 234 5678 o 300 123 4567" data-v="telefono" required>
                                 @error('telefono') <span class="invalid-feedback d-block">{{ $message }}</span> @enderror
                             </div>
-                            <div class="col-md-5">
+                            {{-- Departamento y ciudad: salen de la API de departamentos de Colombia (api-colombia.com, app/Support/ApisExternas.php).
+                                 Primero se elige el departamento y luego se cargan sus ciudades. --}}
+                            <div class="col-md-6">
+                                <label for="departamento" class="form-label fw-medium">Departamento</label>
+                                <select id="departamento" name="departamento" class="form-select{{ $errors->has('departamento') ? ' is-invalid' : '' }}" required @disabled(! $departamentos)>
+                                    <option value="">Selecciona el departamento…</option>
+                                    @foreach ($departamentos ?? [] as $d)
+                                        <option value="{{ $d['nombre'] }}" data-id="{{ $d['id'] }}" @selected(old('departamento') === $d['nombre'])>{{ $d['nombre'] }}</option>
+                                    @endforeach
+                                </select>
+                                @unless ($departamentos)
+                                    <span class="form-text text-danger">No se pudo cargar la lista de departamentos (la API externa no respondió). Intenta de nuevo en unos minutos.</span>
+                                @endunless
+                                @error('departamento') <span class="invalid-feedback d-block">{{ $message }}</span> @enderror
+                            </div>
+                            <div class="col-md-6">
                                 <label for="ciudad" class="form-label fw-medium">Ciudad</label>
-                                <input type="text" id="ciudad" name="ciudad" value="{{ old('ciudad') }}" class="{{ $campo('ciudad') }}" maxlength="100" data-v="ciudad" required>
+                                <select id="ciudad" name="ciudad" class="form-select{{ $errors->has('ciudad') ? ' is-invalid' : '' }}" data-anterior="{{ old('ciudad') }}" required disabled>
+                                    <option value="">Primero elige el departamento</option>
+                                </select>
+                                <span id="ciudad_aviso" class="form-text"></span>
                                 @error('ciudad') <span class="invalid-feedback d-block">{{ $message }}</span> @enderror
                             </div>
-                            <div class="col-md-7">
+                            <div class="col-12">
                                 <label for="direccion" class="form-label fw-medium">Dirección <span class="text-muted fw-normal">(opcional)</span></label>
                                 <input type="text" id="direccion" name="direccion" value="{{ old('direccion') }}" class="{{ $campo('direccion') }}" maxlength="200" placeholder="Calle 12 # 34-56" data-v="direccion">
                                 @error('direccion') <span class="invalid-feedback d-block">{{ $message }}</span> @enderror
@@ -188,6 +206,53 @@
     </div>
 </section>
 
+{{-- Carga las ciudades del departamento elegido (ruta api-externa.ciudades → ApiExternaController@ciudades) --}}
+<script>
+(function () {
+    const depto = document.getElementById('departamento');
+    const ciudad = document.getElementById('ciudad');
+    const aviso = document.getElementById('ciudad_aviso');
+    const urlBase = @json(url('api-externa/departamentos'));
 
+    function cargarCiudades(elegir) {
+        const opcion = depto.options[depto.selectedIndex];
+        const id = opcion ? opcion.dataset.id : '';
+        ciudad.innerHTML = '';
+        aviso.textContent = '';
+        ciudad.disabled = true;
+
+        if (!id) {
+            ciudad.add(new Option('Primero elige el departamento', ''));
+            return;
+        }
+
+        ciudad.add(new Option('Cargando ciudades…', ''));
+        fetch(urlBase + '/' + id + '/ciudades', { headers: { 'Accept': 'application/json' } })
+            .then(r => r.json().then(j => ({ ok: r.ok, j })))
+            .then(({ ok, j }) => {
+                ciudad.innerHTML = '';
+                if (!ok || !Array.isArray(j.ciudades)) {
+                    ciudad.add(new Option('No se pudieron cargar las ciudades', ''));
+                    aviso.textContent = j.error || 'La API externa no respondió. Intenta de nuevo.';
+                    aviso.className = 'form-text text-danger';
+                    return;
+                }
+                ciudad.add(new Option('Selecciona la ciudad…', ''));
+                j.ciudades.forEach(c => ciudad.add(new Option(c, c, false, c === elegir)));
+                ciudad.disabled = false;
+            })
+            .catch(() => {
+                ciudad.innerHTML = '';
+                ciudad.add(new Option('No se pudieron cargar las ciudades', ''));
+                aviso.textContent = 'La API externa no respondió. Intenta de nuevo.';
+                aviso.className = 'form-text text-danger';
+            });
+    }
+
+    depto.addEventListener('change', () => cargarCiudades(''));
+    // Si el formulario volvió con errores, se recupera el departamento y la ciudad que ya había elegido.
+    if (depto.value) cargarCiudades(ciudad.dataset.anterior);
+})();
+</script>
 
 @include('includes.footer')
