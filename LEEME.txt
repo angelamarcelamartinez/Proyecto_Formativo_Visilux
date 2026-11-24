@@ -1,99 +1,39 @@
-VISILUX · Integracion de las APIs en los flujos reales (2026-11-23, version 5: triggers sin FROM DUAL + trigger de precios)
-====================================================================
+VISILUX · Corrección de los errores de la fusión (24/11/2026)
+==============================================================
 
-INSTALACION
-  1. Copiar y pegar el contenido de este zip en la RAIZ del proyecto (reemplazar archivos).
-  2. En phpMyAdmin (base visilux, pestaña SQL) ejecutar:
-       database/sql/2026_11_23_1_login_obligatorio_log_acceso.sql   (VERSION 5: trigger 1 con IF, sin FROM DUAL)
-       database/sql/2026_11_23_2_api_triggers.sql                   (VERSION 5: triggers con IF, sin FROM DUAL;
-                                                                     trigger 4 nuevo: historial de precios de productos)
-       Los dos se pueden volver a ejecutar sin problema (borran y crean los triggers). Usan DELIMITER $$.
-       database/sql/2026_11_23_3_empresa_departamento.sql   (agrega la columna empresa.departamento)
-  3. En la terminal: php artisan optimize:clear
-  4. Pruebas: php artisan test --filter=ApisExternasTest   (13 pruebas)
-  No hay archivos para eliminar. Si ya ejecutaste el SQL de la version anterior, no lo vuelvas a ejecutar.
+QUÉ SE ROMPIÓ EN LA FUSIÓN (rama master, commit 2a2cb23)
+  1. app/Support/ApisExternas.php tenía adentro el código comentado de ApiController
+     (entró en el commit "Ultimos arreglos" d0b36b3: se pegó el archivo en la carpeta equivocada).
+     Efecto: la clase ApisExternas no existía y fallaban el inicio, agendar cita,
+     contratar plan, recepción y las pruebas.
+  2. app/Http/Controllers/Admin/CrudController.php: el commit "Tercer commit Juanita Ramirez"
+     (2a2cb23) borró el método ordenar(), pero index() y export() lo siguen usando.
+     Efecto: error 500 en TODOS los listados y exportaciones del panel del administrador.
+  3. Quedaron dos archivos de "solicitudes de visitantes", función que se quitó con el
+     login obligatorio. La vista usaba rutas que ya no existen.
 
-APIS USADAS (los mismos endpoints de public/apis/)
-  - Departamentos/ciudades: https://api-colombia.com/api/v1/Department  y  /api/v1/Department/{id}/cities
-  - Indice UV Ibague:       https://api.open-meteo.com/v1/forecast?...&current=uv_index&daily=uv_index_max
-  - Festivos Colombia:      https://date.nager.at/api/v3/PublicHolidays/{anio}/CO
+INSTALACIÓN
+  1. Copiar y pegar el contenido de este zip en la RAÍZ del proyecto (reemplazar archivos):
+       app/Support/ApisExternas.php                       (la clase correcta, con comentarios)
+       app/Http/Controllers/Admin/ApiController.php       (mismo código de antes, ahora con comentarios)
+       app/Http/Controllers/Admin/CrudController.php      (se volvió a poner el método ordenar())
+  2. ELIMINAR del proyecto:
+       app/Models/UsuariosNoRegistrados.php
+       resources/views/staff/recepcion/solicitudes.blade.php
+  3. En la terminal:
+       composer dump-autoload
+       php artisan optimize:clear
+  4. No hay SQL nuevo para ejecutar.
 
-ARCHIVOS NUEVOS
-  public/apis/consultar_api.php
-      La funcion consultarApi($url) con cURL, en un solo lugar. La usan los 3 archivos de public/apis/ y Laravel.
-  app/Support/ApisExternas.php
-      Llama a las 3 APIs (con consultarApi), revisa que la respuesta tenga el formato esperado y la guarda en cache
-      (departamentos/ciudades/festivos 1 dia, UV 10 min). Si una API falla devuelve null y la pantalla muestra un aviso.
-  app/Http/Controllers/ApiExternaController.php
-      Dos rutas JSON para el JavaScript: ciudades de un departamento y "¿esta fecha es festivo?".
-  resources/views/includes/rayos-uv.blade.php
-      Seccion informativa de rayos UV del inicio: indice actual, nivel con color, consejo y boton a gafas con proteccion UV.
-  database/sql/2026_11_23_3_empresa_departamento.sql
-      ALTER TABLE empresa ADD COLUMN departamento.
-  tests/Feature/ApisExternasTest.php
-      11 pruebas: departamentos, ciudades (y su ruta), festivos, calendario de festivos, indice UV y la seccion UV.
-      No usan internet: simulan la respuesta de cada API con el mismo formato real.
+CÓMO COMPROBAR
+  - php artisan test   → 14 pruebas OK. Falla solo tests/Feature/ExampleTest (ya fallaba antes:
+    usa SQLite vacío y no encuentra la tabla empresa).
+  - Abrir /, /agendar-cita, /planes/1/contratar, /admin/producto, /admin/producto/exportar,
+    /recepcion y /recepcion/citas/nueva: todas deben cargar.
 
-ARCHIVOS MODIFICADOS
-  VERSION 6 - MENU DEL ADMIN:
-  resources/views/layouts/admin.blade.php, resources/views/admin/api/index.blade.php,
-  resources/views/admin/triggers/index.blade.php, app/Http/Controllers/Admin/ApiController.php
-      Se incluyen otra vez para asegurar que el menu del admin tenga "API" y "Triggers" (al final del menu lateral).
-
-  VERSION 5 - TRIGGERS:
-  database/sql/2026_11_23_1_login_obligatorio_log_acceso.sql y 2026_11_23_2_api_triggers.sql
-      Los 4 triggers usan BEGIN ... IF ... END IF; ... END en vez de INSERT ... SELECT ... FROM DUAL WHERE.
-      Trigger 4 nuevo: trg_producto_cambio_precio (AFTER UPDATE en producto) guarda en log_precio_producto
-      el precio anterior y el nuevo. Reemplaza a trg_lote_stock_bajo (el script lo borra).
-      La tabla vieja alerta_stock ya no se usa; si quieres puedes borrarla (DROP TABLE alerta_stock).
-  app/Http/Controllers/Admin/ApiController.php y resources/views/admin/triggers/index.blade.php
-      Admin > Triggers muestra "Cambios de precio de productos (trigger 4)" en vez de las alertas de stock.
-
-  resources/views/contratar/create.blade.php
-      El campo "Ciudad" (texto) se cambio por dos listas: Departamento (de la API) y Ciudad (se carga al elegir el departamento).
-  app/Http/Controllers/ContratarController.php
-      create(): envia la lista de departamentos a la vista. store(): valida que el departamento y la ciudad sean de la API.
-  app/Support/RegistroOptica.php
-      Guarda el departamento en la empresa (la ciudad ya se guardaba).
-  app/Models/Empresa.php
-      'departamento' agregado a $fillable.
-  app/Http/Controllers/SiteController.php
-      El index recibe $uv (indice UV actual).
-  resources/views/index.blade.php
-      Incluye la seccion de rayos UV (entre Terapia Visual y el perfil profesional).
-  app/Http/Controllers/ProductoController.php
-      Nuevo filtro ?uv=1: lentes de sol (categoria 2) y productos con "UV", "polarizado", "fotosensible" o "Transitions"
-      en el nombre o la descripcion (la tabla producto no tiene un campo de proteccion UV).
-  resources/views/productos/index.blade.php
-      Aviso "Mostrando gafas con proteccion UV" con boton para ver todos, y el filtro se mantiene al usar los demas.
-  CAMBIO VERSION 2 - FESTIVOS (los festivos NO se trabajan):
-  resources/views/includes/calendario-festivos.blade.php  (NUEVO)
-      Calendario (flatpickr) para la fecha de la cita: los festivos salen en AMARILLO, con el nombre al pasar el mouse,
-      y NO se pueden seleccionar. Si la API de festivos no responde, muestra un aviso debajo del campo.
-  public/assets/vendor/flatpickr/  (NUEVO)
-      Copia local de flatpickr 4.6.13 (licencia MIT) + idioma espanol. No depende de internet ni de un CDN.
-  resources/views/staff/recepcion/nueva-cita.blade.php
-      La fecha usa el calendario con festivos. Se quito la casilla de "confirmar festivo" de la version anterior.
-  resources/views/agendar-cita.blade.php
-      La cita publica (pacientes) usa el mismo calendario con festivos.
-  app/Http/Controllers/Staff/RecepcionController.php
-      nuevaCita(): envia los festivos de los proximos 60 dias. guardarCita(): si la fecha es festivo, NO guarda y muestra el error.
-  app/Http/Controllers/SiteController.php
-      agendarCita(): envia los festivos. guardarCita(): rechaza fechas festivas.
-  app/Support/AgendaCitas.php
-      turnosLibres(): un festivo no tiene horarios (asi se bloquea en todo el sitio). Nuevo esFestivo().
-  app/Support/ApisExternas.php
-      Nuevo festivosEntre($desde, $hasta) para pintar el calendario.
-      VERSION 3: si la API date.nager.at no responde, se usan los festivos de Colombia calculados por el sistema
-      (festivosLocales: fijos, Ley Emiliani y los que dependen de la Pascua) y el calendario muestra un aviso.
-      VERSION 4 (CAUSA DEL ERROR): el ApiController anterior guardaba en cache la respuesta cruda de la API con la
-      clave "api_festivos_2026" (dura 1 dia, en la tabla cache). La nueva clase leia esa misma clave, recibia la lista
-      cruda en vez de ['fecha' => 'nombre'] y por eso el calendario quedaba sin festivos. Ahora usa claves propias
-      (visilux_apis_v2_...) y revisa el formato de lo guardado.
-  app/Http/Controllers/ApiExternaController.php y routes/web.php
-      Se quito la ruta /recepcion/festivo: ya no hace falta porque los festivos llegan con la pagina.
-
-  routes/web.php
-      Ruta nueva: GET /api-externa/departamentos/{id}/ciudades.
-  public/apis/api_departamentos.php, api_indice_uv.php, api_festivos.php
-      Ahora usan consultar_api.php en vez de tener la funcion copiada (la tabla y el else siguen igual).
+QUÉ SE REVISÓ Y ESTÁ BIEN
+  - Commits de Felipe (Alcance de agendamiento_procedimiento, orden por precio, lang/es.json)
+    y de Juanita (validation.php, estados por tabla, formato de pesos): funcionan.
+  - filterDefinitions(array $config, ?string $table = null) ya estaba corregido.
+  - Lo que desapareció de las solicitudes, del carrito de invitado y de id_usuario_nr
+    se quitó a propósito con el login obligatorio (zip visilux-cuenta-obligatoria-triggers-api).

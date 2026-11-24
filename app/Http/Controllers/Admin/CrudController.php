@@ -331,6 +331,24 @@ class CrudController extends Controller
         return $query;
     }
 
+    /**
+     * Orden del listado: el de 'order_by' en config/admin_tables.php si la tabla lo trae;
+     * si no, los registros más nuevos primero (llave primaria descendente).
+     * (Se usa en index() y export(). Se había borrado sin querer en la fusión del 17/11.)
+     */
+    protected function ordenar(Builder $query, string $table, array $config): Builder
+    {
+        if (empty($config['order_by'])) {
+            return $query->orderByDesc("{$table}.{$config['primary_key']}");
+        }
+
+        foreach ($config['order_by'] as [$columna, $direccion]) {
+            $query->orderBy("{$table}.{$columna}", $direccion);
+        }
+
+        return $query->orderByDesc("{$table}.{$config['primary_key']}");
+    }
+
     /** Filtros disponibles para la tabla, con sus opciones ya cargadas. */
     protected function filterDefinitions(array $config, ?string $table = null): array
     {
