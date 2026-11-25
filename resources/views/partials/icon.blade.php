@@ -40,6 +40,13 @@
         'lock' => 'M6 10V7a6 6 0 1112 0v3m-13 0h14a1 1 0 011 1v9a1 1 0 01-1 1H5a1 1 0 01-1-1v-9a1 1 0 011-1z',
         'mail' => 'M4 4h16v16H4V4zm0 0l8 9 8-9',
         'building-office' => 'M4 21V5a1 1 0 011-1h6a1 1 0 011 1v16M15 21V9a1 1 0 011-1h3a1 1 0 011 1v12',
+        // Módulo del optómetra
+        'printer' => 'M6 9V3h12v6M6 18H4a1 1 0 01-1-1v-6a2 2 0 012-2h14a2 2 0 012 2v6a1 1 0 01-1 1h-2M6 14h12v7H6v-7z',
+        'activity' => 'M3 12h4l3-8 4 16 3-8h4',
+        'play' => 'M6 4l14 8-14 8V4z',
+        'arrow-right' => 'M5 12h14m-6-6l6 6-6 6',
+        'maximize' => 'M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5',
+        'history' => 'M3 12a9 9 0 109-9 9.75 9.75 0 00-6.74 2.74L3 8m0-5v5h5m4-1v5l3 2',
     ];
     $name = $name ?? 'grid';
     $path = $icons[$name] ?? $icons['grid'];

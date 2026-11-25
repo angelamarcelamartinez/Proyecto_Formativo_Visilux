@@ -19,13 +19,24 @@ class ChatArchivo
         return $dir;
     }
 
-    protected static function base(string $nit, int $a, int $b): string
+    protected static function base(string $nit, string $a, string $b): string
     {
-        return self::carpeta($nit) . '/' . min($a, $b) . '_' . max($a, $b);
+        [$a, $b] = [self::limpio($a), self::limpio($b)];
+        // Documentos numéricos: mismo orden de siempre (los archivos viejos siguen sirviendo).
+        // Con un pasaporte (letras) se ordena como texto.
+        $primero = (ctype_digit($a) && ctype_digit($b)) ? ((int) $a <= (int) $b) : (strcmp($a, $b) <= 0);
+
+        return self::carpeta($nit) . '/' . ($primero ? $a . '_' . $b : $b . '_' . $a);
+    }
+
+    /** Solo letras y números: el documento se usa como nombre de archivo. */
+    protected static function limpio(string $documento): string
+    {
+        return preg_replace('/[^A-Za-z0-9]/', '', $documento);
     }
 
     /** Mensajes de la conversación con id mayor a $despues (objetos con id_chat, de_documento, para_documento, mensaje, fecha). */
-    public static function mensajes(string $nit, int $a, int $b, int $despues = 0, int $limite = 200): array
+    public static function mensajes(string $nit, string $a, string $b, int $despues = 0, int $limite = 200): array
     {
         $archivo = self::base($nit, $a, $b) . '.jsonl';
         if (! is_file($archivo)) {
@@ -43,7 +54,7 @@ class ChatArchivo
         return array_slice($lista, -$limite);
     }
 
-    public static function ultimo(string $nit, int $a, int $b)
+    public static function ultimo(string $nit, string $a, string $b)
     {
         $m = self::mensajes($nit, $a, $b, 0, 1);
 
@@ -51,7 +62,7 @@ class ChatArchivo
     }
 
     /** Agrega un mensaje y devuelve su id (con bloqueo, para que dos envíos a la vez no se pisen). */
-    public static function agregar(string $nit, int $de, int $para, string $texto): object
+    public static function agregar(string $nit, string $de, string $para, string $texto): object
     {
         $archivo = self::base($nit, $de, $para) . '.jsonl';
         $f = fopen($archivo, 'c+');
@@ -65,8 +76,8 @@ class ChatArchivo
 
         $mensaje = (object) [
             'id_chat' => $id + 1,
-            'de_documento' => $de,
-            'para_documento' => $para,
+            'de_documento' => (string) $de,
+            'para_documento' => (string) $para,
             'mensaje' => $texto,
             'fecha' => now()->toDateTimeString(),
         ];
@@ -77,7 +88,7 @@ class ChatArchivo
         return $mensaje;
     }
 
-    protected static function leidos(string $nit, int $a, int $b): array
+    protected static function leidos(string $nit, string $a, string $b): array
     {
         $archivo = self::base($nit, $a, $b) . '.leido.json';
 
@@ -85,7 +96,7 @@ class ChatArchivo
     }
 
     /** Marca como leído, para $yo, todo lo de la conversación hasta el mensaje $hastaId. */
-    public static function marcarLeido(string $nit, int $yo, int $otro, int $hastaId): void
+    public static function marcarLeido(string $nit, string $yo, string $otro, int $hastaId): void
     {
         $datos = self::leidos($nit, $yo, $otro);
         if (($datos[$yo] ?? 0) >= $hastaId) {
@@ -96,22 +107,22 @@ class ChatArchivo
     }
 
     /** Mensajes del otro que $yo todavía no ha leído. */
-    public static function sinLeer(string $nit, int $yo, int $otro): int
+    public static function sinLeer(string $nit, string $yo, string $otro): int
     {
         $visto = (int) (self::leidos($nit, $yo, $otro)[$yo] ?? 0);
 
         return count(array_filter(
             self::mensajes($nit, $yo, $otro, $visto, 1000),
-            fn ($m) => (int) $m->de_documento === $otro
+            fn ($m) => (string) $m->de_documento === $otro
         ));
     }
 
     /** Total de mensajes sin leer de todas mis conversaciones (insignia del menú). */
-    public static function totalSinLeer(string $nit, int $yo): int
+    public static function totalSinLeer(string $nit, string $yo): int
     {
         $total = 0;
         foreach (glob(self::carpeta($nit) . '/*.jsonl') ?: [] as $archivo) {
-            [$a, $b] = array_map('intval', explode('_', basename($archivo, '.jsonl')) + [0, 0]);
+            [$a, $b] = explode('_', basename($archivo, '.jsonl')) + ['', ''];
             if ($a === $yo || $b === $yo) {
                 $total += self::sinLeer($nit, $yo, $a === $yo ? $b : $a);
             }

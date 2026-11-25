@@ -9,15 +9,18 @@
         $nombreOptica = $yo->empresa->nombre ?? 'Óptica Visilux';
 
         // Mensajes de chat sin leer (insignia del menú).
-        $chatSinLeer = \App\Support\ChatArchivo::totalSinLeer((string) $yo->nit_empresa, (int) $yo->documento);
+        $chatSinLeer = \App\Support\ChatArchivo::totalSinLeer((string) $yo->nit_empresa, (string) $yo->documento);
 
         // Menú según el rol: [ruta, texto, ícono, patrón para marcarlo como activo, insignia]
         if ($esOptometra) {
             $menu = [
-                ['optometra.inicio', 'Inicio', 'grid', 'optometra.inicio', null],
+                ['optometra.dashboard', 'Mi día', 'grid', 'optometra.dashboard', null],
                 ['optometra.agenda', 'Mi agenda', 'calendar', 'optometra.agenda', null],
-                ['optometra.pacientes', 'Mis pacientes', 'users', 'optometra.paciente*', null],
+                ['optometra.pacientes.index', 'Mis pacientes', 'users', 'optometra.pacientes.*', null],
+                ['optometra.terapias.index', 'Terapias', 'activity', 'optometra.terapias.*', null],
+                ['optometra.simulador', 'Simulador visual', 'eye', 'optometra.simulador*', null],
                 ['optometra.horario', 'Mi horario', 'clock', 'optometra.horario', null],
+                ['optometra.perfil', 'Mi perfil', 'user', 'optometra.perfil*', null],
                 ['chat.index', 'Chat con recepción', 'mail', 'chat.*', $chatSinLeer],
             ];
             $panelNombre = 'Panel del optómetra';

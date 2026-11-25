@@ -1,4 +1,5 @@
-@extends('layouts.staff')
+{{-- El optómetra ve el chat dentro de su consultorio; la recepcionista, en su panel. --}}
+@extends(auth()->user()->esOptometra() ? 'layouts.optometra' : 'layouts.staff')
 
 @section('title', 'Chat')
 @section('breadcrumb', 'Chat')
