@@ -92,13 +92,42 @@
     //   4 Pasaporte              5 a 15 dígitos (el sistema solo guarda números)
     //   5 NIT                    9 o 10 dígitos
     // ---------------------------------------------------------------
+    // Mismas reglas que App\Support\TipoDocumento y el procedimiento sp_validar_documento de la base.
+    // Si la página trae window.VL_TIPOS_DOC (partials/documento-js), se usan esas (salen de la tabla tipo_documento).
     var TIPOS_DOC = {
-        '1': { min: 6, max: 10, nombre: 'La cédula' },
-        '2': { min: 10, max: 11, nombre: 'La tarjeta de identidad' },
-        '3': { min: 6, max: 10, nombre: 'La cédula de extranjería' },
-        '4': { min: 5, max: 15, nombre: 'El pasaporte' },
-        '5': { min: 9, max: 10, nombre: 'El NIT' }
+        '1': { min: 6, max: 10, numeros: true, nombre: 'La cédula de ciudadanía' },
+        '2': { min: 10, max: 11, numeros: true, nombre: 'La tarjeta de identidad' },
+        '3': { min: 6, max: 10, numeros: true, nombre: 'La cédula de extranjería' },
+        '4': { min: 6, max: 12, numeros: false, nombre: 'El pasaporte' },
+        '5': { min: 9, max: 10, numeros: true, nombre: 'El NIT' },
+        '6': { min: 10, max: 11, numeros: true, nombre: 'El registro civil' }
     };
+    if (window.VL_TIPOS_DOC) {
+        Object.keys(window.VL_TIPOS_DOC).forEach(function (k) {
+            var x = window.VL_TIPOS_DOC[k];
+            TIPOS_DOC[k] = { min: x.min, max: x.max, numeros: !!x.numeros, nombre: (TIPOS_DOC[k] || {}).nombre || 'El documento', ayuda: x.ayuda };
+        });
+    }
+
+    /** Regla del tipo de documento elegido para este campo (data-v-tipo="#select" o data-v-tipo-fijo="1"). */
+    function tipoDoc(campo) {
+        var fijo = campo.getAttribute('data-v-tipo-fijo');
+        var sel = campo.getAttribute('data-v-tipo') ? document.querySelector(campo.getAttribute('data-v-tipo')) : null;
+        return TIPOS_DOC[fijo || (sel ? sel.value : '1')] || { min: 4, max: 20, numeros: false, nombre: 'El documento' };
+    }
+
+    /** Ajusta teclado, largo máximo y ayuda del campo según el tipo de documento. */
+    function prepararDocumento(campo) {
+        var t = tipoDoc(campo);
+        campo.setAttribute('inputmode', t.numeros ? 'numeric' : 'text');
+        campo.setAttribute('maxlength', String(t.max));
+        campo.setAttribute('autocapitalize', t.numeros ? 'off' : 'characters');
+        campo.placeholder = t.numeros ? 'Solo números (' + t.min + (t.min === t.max ? '' : ' a ' + t.max) + ' dígitos)'
+                                      : 'Letras y números (' + t.min + ' a ' + t.max + ')';
+        if (campo.type === 'number') campo.type = 'text';
+        var limpio = t.numeros ? campo.value.replace(/\D/g, '') : campo.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+        if (limpio !== campo.value) campo.value = limpio;
+    }
 
     var LETRAS = "A-Za-zÁÉÍÓÚÜÑáéíóúüñ";
     var RE_NOMBRE = new RegExp('^[' + LETRAS + "]+(?:[ '\\-.][" + LETRAS + ']+)*\\.?$');
@@ -107,7 +136,7 @@
     var RE_EMAIL = /^[A-Za-z0-9._%+\-]+@[A-Za-z0-9\-]+(?:\.[A-Za-z0-9\-]+)*\.[A-Za-z]{2,}$/;
 
     // Reglas que solo admiten números mientras se escribe
-    var SOLO_NUMEROS = ['celular', 'telefono', 'documento', 'cvv', 'entero'];
+    var SOLO_NUMEROS = ['celular', 'telefono', 'cvv', 'entero']; // 'documento' depende del tipo (ver prepararDocumento)
 
     function reglas(campo) {
         return (campo.getAttribute('data-v') || '').split(/\s+/).filter(Boolean);
@@ -187,12 +216,12 @@
                     if (!/^(3\d{9}|60\d{8})$/.test(d)) return 'Debe ser un celular (empieza por 3) o un fijo con indicativo (empieza por 60, ej. 601 234 5678).';
                     break;
                 case 'documento': {
-                    if (!/^\d+$/.test(valor)) return 'El documento lleva solo números, sin puntos ni espacios.';
-                    var sel = campo.getAttribute('data-v-tipo') ? document.querySelector(campo.getAttribute('data-v-tipo')) : null;
-                    var t = TIPOS_DOC[sel ? sel.value : '1'] || { min: 5, max: 15, nombre: 'El documento' };
-                    if (d.charAt(0) === '0') return 'El documento no puede empezar por 0.';
-                    if (d.length < t.min || d.length > t.max) {
-                        return t.nombre + ' debe tener ' + (t.min === t.max ? t.min : 'entre ' + t.min + ' y ' + t.max) + ' dígitos.';
+                    var t = tipoDoc(campo);
+                    if (t.numeros && !/^\d+$/.test(valor)) return t.nombre + ' lleva solo números, sin puntos ni espacios.';
+                    if (!t.numeros && !/^[A-Za-z0-9]+$/.test(valor)) return t.nombre + ' lleva solo letras y números, sin espacios ni símbolos.';
+                    if (t.numeros && valor.charAt(0) === '0') return 'El documento no puede empezar por 0.';
+                    if (valor.length < t.min || valor.length > t.max) {
+                        return t.nombre + ' debe tener ' + (t.min === t.max ? t.min : 'entre ' + t.min + ' y ' + t.max) + (t.numeros ? ' dígitos' : ' caracteres') + ' (llevas ' + valor.length + ').';
                     }
                     break;
                 }
@@ -260,7 +289,7 @@
         }
 
         var maxValor = campo.getAttribute('data-v-max-valor');
-        if (maxValor && d && Number(d) > Number(maxValor)) return 'El número es demasiado largo.';
+        if (maxValor && r.indexOf('documento') === -1 && d && Number(d) > Number(maxValor)) return 'El número es demasiado largo.';
 
         var igual = campo.getAttribute('data-v-igual');
         if (igual) {
@@ -371,6 +400,18 @@
                 campo.setAttribute('autocomplete', 'off');
                 if (campo.value) campo.value = formatearNit(soloDigitos(campo.value));
                 campo.addEventListener('input', function () { aplicarMascara(campo, formatearNit); });
+            }
+
+            // Documento: números o letras según el tipo elegido; se reajusta al cambiar el tipo
+            if (r.indexOf('documento') !== -1) {
+                prepararDocumento(campo);
+                campo.addEventListener('input', function () {
+                    var t = tipoDoc(campo);
+                    var limpio = t.numeros ? campo.value.replace(/\D/g, '') : campo.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+                    if (limpio !== campo.value) campo.value = limpio;
+                });
+                var selTipo = campo.getAttribute('data-v-tipo') ? document.querySelector(campo.getAttribute('data-v-tipo')) : null;
+                if (selTipo) selTipo.addEventListener('change', function () { prepararDocumento(campo); if (campo.value) revisar(campo); });
             }
 
             // Solo números

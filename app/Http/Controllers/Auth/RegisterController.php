@@ -49,15 +49,18 @@ class RegisterController extends Controller
      */
     protected function validator(array $data)
     {
+        // "1.020.304" -> "1020304", "av 123456" -> "AV123456"
+        $data['documento'] = \App\Support\TipoDocumento::normalizar($data['documento'] ?? '');
+
         return Validator::make($data, [
             // Óptica a la que pertenece el usuario (solo ópticas activas)
             'nit_empresa' => ['required', 'string', Rule::exists('empresa', 'nit')->where('estado', 'activa')],
             'id_tipo_docu' => ['required', 'integer', 'exists:tipo_documento,id_tipo_docu'],
-            'documento' => ['required', 'integer', 'unique:usuario,documento'],
+            'documento' => ['required', 'string', 'max:20', new \App\Rules\DocumentoValido($data['id_tipo_docu'] ?? null), 'unique:usuario,documento', 'unique:optometra,doc_optometra'],
             'nombres' => ['required', 'string', 'max:255'],
             'apellido' => ['required', 'string', 'max:255'],
             'telefono' => ['required', 'string', 'max:20', 'unique:usuario,telefono'],
-            'email' => ['required', 'string', 'email', 'max:100', 'unique:usuario,email'],
+            'email' => ['required', 'string', 'email', 'max:100', 'unique:usuario,email', 'unique:optometra,correo'],
             'password' => ['required', 'string', 'min:8', 'confirmed'],
             // No basta con el JS del modal -- si alguien manda el formulario
             // sin pasar por ahí (por ejemplo, a mano), el servidor lo rechaza.
@@ -78,7 +81,7 @@ class RegisterController extends Controller
     protected function create(array $data)
     {
         $campos = [
-            'documento' => $data['documento'],
+            'documento' => \App\Support\TipoDocumento::normalizar($data['documento']),
             'nombres' => $data['nombres'],
             'apellido' => $data['apellido'],
             'telefono' => $data['telefono'],

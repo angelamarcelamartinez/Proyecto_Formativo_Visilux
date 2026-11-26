@@ -25,6 +25,9 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // Proveedor de login en dos tablas (usuario y optometra). Ver config/auth.php.
+        Auth::provider('dos_tablas', fn ($app, array $config) => new \App\Auth\DosTablasUserProvider($app['hash'], $config['model']));
+
         // El header aparece en TODAS las páginas del sitio, así que el
         // conteo del carrito se calcula aquí una sola vez, en vez de
         // que cada controlador tenga que acordarse de pasarlo.

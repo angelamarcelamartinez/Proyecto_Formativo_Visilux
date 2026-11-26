@@ -16,6 +16,8 @@ return Application::configure(basePath: dirname(__DIR__))
             'superadmin' => \App\Http\Middleware\SoloSuperadmin::class,
             'cambiar.password' => \App\Http\Middleware\CambiarPasswordObligatorio::class,
             'licencia' => \App\Http\Middleware\VerificarLicencia::class,
+            // optometra → solo optómetras (rol 7) con su fila en la tabla optometra.
+            'optometra' => \App\Http\Middleware\SoloOptometra::class,
         ]);
 
         // Estados de licencia al día y sesión cerrada a quien no es administrador si su licencia está inactiva

@@ -87,13 +87,13 @@
                             <span class="input-group-text bg-light border-end-0">
                                 <i class="bi bi-card-text text-muted"></i>
                             </span>
-                            <input type="text" inputmode="numeric" maxlength="11"
-                                   data-v="documento" data-v-tipo="#id_tipo_docu" data-v-max-valor="2147483647"
+                            <input type="text" maxlength="20" autocomplete="off"
+                                   data-v="documento" data-v-tipo="#id_tipo_docu"
                                    class="form-control border-start-0 login-input @error('documento') is-invalid @enderror"
                                    id="documento"
                                    name="documento"
                                    value="{{ old('documento') }}"
-                                   placeholder="Ej: 1020304050"
+                                   placeholder="Solo números (6 a 10 dígitos)"
                                    required
                                    autofocus>
                         </div>
@@ -385,6 +385,7 @@
     });
 </script>
     <!-- Validación en línea de los formularios (verde = bien, rojo = mal) -->
+    @include('partials.documento-js')
     <script src="{{ asset('assets/js/validacion-en-linea.js') }}?v={{ @filemtime(public_path('assets/js/validacion-en-linea.js')) }}"></script>
 </body>
 </html>

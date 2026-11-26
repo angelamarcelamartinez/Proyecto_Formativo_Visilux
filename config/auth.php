@@ -62,8 +62,10 @@ return [
     */
 
     'providers' => [
+        // Login en dos tablas: primero `usuario` y, si el correo no está ahí, `optometra`
+        // (App\Auth\DosTablasUserProvider, registrado en AppServiceProvider).
         'users' => [
-            'driver' => 'eloquent',
+            'driver' => 'dos_tablas',
             'model' => App\Models\Usuario::class,
         ],
 
