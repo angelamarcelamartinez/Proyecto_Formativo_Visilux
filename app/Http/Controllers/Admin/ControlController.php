@@ -33,7 +33,7 @@ class ControlController extends Controller
     public function enviar(Request $request, string $documento): RedirectResponse
     {
         $dias = (int) $request->get('dias', 30);
-        $paciente = ControlReminder::proximos($dias, \App\Support\Alcance::nit() ?? '')->firstWhere('documento', (int) $documento);
+        $paciente = ControlReminder::proximos($dias, \App\Support\Alcance::nit() ?? '')->firstWhere('documento', (string) $documento);
 
         if (! $paciente) {
             return back()->withErrors([
@@ -101,7 +101,7 @@ class ControlController extends Controller
         return true;
     }
 
-    protected function cacheKey(int $documento, int $anio): string
+    protected function cacheKey(string $documento, int $anio): string
     {
         return "control_recordatorio_enviado:{$documento}:{$anio}";
     }
