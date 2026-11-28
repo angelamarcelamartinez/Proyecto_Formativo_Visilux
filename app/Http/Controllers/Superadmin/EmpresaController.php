@@ -80,8 +80,14 @@ class EmpresaController extends Controller
             ->where('usuario.nit_empresa', $nit)
             ->select('rol.nombre_rol', DB::raw('COUNT(*) as total'))
             ->groupBy('rol.nombre_rol')
-            ->orderByDesc('total')
             ->get();
+
+        // Los optómetras tienen su cuenta en la tabla `optometra`, no en `usuario`.
+        $optometras = DB::table('optometra')->where('nit_empresa', $nit)->whereNotNull('contrasena')->count();
+        if ($optometras > 0) {
+            $usuariosPorRol->push((object) ['nombre_rol' => 'Optómetra', 'total' => $optometras]);
+        }
+        $usuariosPorRol = $usuariosPorRol->sortByDesc('total')->values();
 
         $admins = Usuario::where('nit_empresa', $nit)
             ->where('id_rol', config('visioptica.rol_admin'))
@@ -236,7 +242,7 @@ class EmpresaController extends Controller
         return view('superadmin.empresas.administradores', compact('empresa', 'admins'));
     }
 
-    public function editarAdmin(string $nit, int $documento): View
+    public function editarAdmin(string $nit, string $documento): View
     {
         return view('superadmin.empresas.administrador-form', [
             'empresa' => Empresa::findOrFail($nit),
@@ -244,7 +250,7 @@ class EmpresaController extends Controller
         ]);
     }
 
-    public function actualizarAdmin(Request $request, string $nit, int $documento): RedirectResponse
+    public function actualizarAdmin(Request $request, string $nit, string $documento): RedirectResponse
     {
         $empresa = Empresa::findOrFail($nit);
         $admin = $this->adminDe($nit, $documento);
@@ -302,7 +308,7 @@ class EmpresaController extends Controller
             ->with('success', 'Administrador actualizado' . ($conClave ? ' y contraseña cambiada.' : '.'));
     }
 
-    protected function adminDe(string $nit, int $documento): Usuario
+    protected function adminDe(string $nit, string $documento): Usuario
     {
         return Usuario::where('nit_empresa', $nit)
             ->where('id_rol', config('visioptica.rol_admin'))
@@ -313,11 +319,15 @@ class EmpresaController extends Controller
     /**
      * Muestra el PDF de la Cámara de Comercio (archivo privado: solo lo ve el superadmin).
      */
+    // GET /superadmin/opticas/{nit}/camara-comercio: abre el PDF privado.
     public function camara(string $nit)
     {
+        // Busca la óptica (404 si no existe).
         $empresa = Empresa::findOrFail($nit);
+        // Si no tiene certificado cargado, 404 con mensaje.
         abort_unless($empresa->tieneCamara(), 404, 'Esta óptica no tiene certificado cargado.');
 
+        // Entrega el PDF para verlo dentro del navegador (inline).
         return response()->file(CamaraComercio::ruta($empresa->camara_comercio), [
             'Content-Type' => 'application/pdf',
             'Content-Disposition' => 'inline; filename="camara-comercio-' . $empresa->nit . '.pdf"',
@@ -367,42 +377,54 @@ class EmpresaController extends Controller
      * Botón «Reenviar credenciales»: genera una contraseña temporal nueva para el administrador
      * y la envía al correo de la óptica y al del administrador.
      */
+    // Botón "Reenviar credenciales" del superadmin (listado de administradores).
     public function reenviarCredenciales(string $nit, string $documento): RedirectResponse
     {
+        // La óptica.
         $empresa = Empresa::findOrFail($nit);
+        // El administrador: del mismo NIT, con rol admin y ese documento (404 si no existe).
         $admin = Usuario::where('nit_empresa', $nit)
             ->where('id_rol', config('visioptica.rol_admin'))
             ->where('documento', $documento)
             ->firstOrFail();
 
+        // Si la óptica sigue pendiente no se envía nada: las credenciales se mandan al aprobar el pago.
         if ($empresa->estaPendiente()) {
             return back()->withErrors(['general' => "{$empresa->nombre} todavía está pendiente: las credenciales se envían al aprobar el pago."]);
         }
 
+        // Última licencia (se necesita para armar el correo).
         $licencia = $empresa->licencias()->orderByDesc('id_licencia')->first();
         if (! $licencia) {
             return back()->withErrors(['general' => "{$empresa->nombre} no tiene licencia: asígnale una antes de enviar credenciales."]);
         }
 
+        // Genera contraseña nueva y envía el correo (ver RegistroOptica).
         $r = \App\Support\RegistroOptica::reenviarCredenciales($empresa, $admin, $licencia);
 
+        // Si el correo salió, avisa a dónde.
         if ($r['enviado']) {
             return back()->with('success', "Credenciales enviadas a {$r['correo']}. El administrador entra con {$r['usuario']} y debe cambiar la contraseña temporal.");
         }
 
+        // Si falló, muestra el error y la contraseña temporal para entregarla por otro medio.
         return back()->with('success', "No se pudo enviar a: {$r['error']}. (Si había dos correos, el otro sí lo recibió.) Entrégale estos datos al administrador: usuario {$r['usuario']}, contraseña temporal {$r['password']}");
     }
 
+    // Bloquear / desbloquear a un administrador desde el panel del superadmin (candado).
     public function cambiarEstadoUsuario(string $nit, string $documento): RedirectResponse
     {
+        // Busca al usuario dentro de esa óptica.
         $usuario = Usuario::where('nit_empresa', $nit)->where('documento', $documento)->firstOrFail();
 
+        // Nunca se puede activar/desactivar a un superadmin desde aquí.
         if ($usuario->esSuperadmin()) {
             abort(404);
         }
 
         $nombre = trim($usuario->nombres . ' ' . $usuario->apellido);
 
+        // Si estaba inactivo: se activa y se le avisa por correo.
         if (\App\Support\BloqueoUsuarios::estaInactivo($usuario)) {
             $correo = \App\Support\BloqueoUsuarios::activar($usuario, 'Usuario activado por VisiOptica');
 
@@ -410,6 +432,7 @@ class EmpresaController extends Controller
                 . ($correo ? ' Se le envió un correo avisándole.' : ' (No se pudo enviar el correo de aviso.)'));
         }
 
+        // Si estaba activo: se desactiva.
         \App\Support\BloqueoUsuarios::inactivar($usuario, 'Usuario desactivado por VisiOptica');
 
         return back()->with('success', "{$nombre} fue desactivado.");

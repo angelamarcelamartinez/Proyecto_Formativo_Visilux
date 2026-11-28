@@ -13,16 +13,17 @@
         }
 
         function buscar() {
-            const doc = input.value.trim();
+            // Cédula, TI... son números; el pasaporte lleva letras. Se quitan puntos, espacios y guiones.
+            const doc = input.value.trim().toUpperCase().replace(/[\s.\-]/g, '');
             if (!doc) {
                 limpiar();
                 status.textContent = 'Escribe el documento del paciente y sus datos se completan solos.';
                 status.className = 'js-lookup-status text-[12px] text-muted';
                 return;
             }
-            if (!/^\d+$/.test(doc)) {
+            if (!/^[A-Z0-9]+$/.test(doc)) {
                 limpiar();
-                status.textContent = 'El documento solo debe tener números.';
+                status.textContent = 'El documento solo puede tener letras y números.';
                 status.className = 'js-lookup-status text-[12px] text-red-600';
                 return;
             }

@@ -5,6 +5,9 @@ return [
     // Roles de la tabla `rol`
     'rol_admin' => 1,
     'rol_superadmin' => 6,
+    // Roles del personal de cada óptica (tabla `rol`). El 7 se crea con database/sql/2026_11_24_modulo_optometra.sql
+    'rol_recepcionista' => 4,
+    'rol_optometra' => 7,
 
     // Dirección del login del superadmin (sin "/" al inicio). No aparece en
     // ningún botón ni enlace del sitio: solo la conoce el superadmin. Cámbiala en el .env con SUPERADMIN_LOGIN_PATH.
@@ -42,14 +45,14 @@ return [
 
         'servicios_titulo' => 'Nuestros Servicios',
         'servicios_subtitulo' => 'Atención especializada para todas las edades',
-        'serv1_titulo' => 'Optometría Infantil',
+        'serv1_titulo' => 'Optometría Pediátrica',
         'serv1_texto' => 'Evaluaciones adaptadas para niños con un enfoque lúdico y profesional que genera confianza.',
-        'serv1_items' => "Examen visual completo\nDetección temprana de problemas\nAsesoría para padres",
+        'serv1_items' => "Examen visual completo\nDetección temprana de problemas visuales\nAsesoría para padres",
         'serv2_titulo' => 'Terapia Visual',
         'serv2_texto' => 'Programas personalizados para mejorar la coordinación ocular, enfoque y rendimiento visual.',
         'serv2_items' => "Ejercicios visuales guiados\nSeguimiento periódico\nEquipos de última generación",
 
-        'prof_nombre' => 'Dra. Catalina Esquivel',
+        'prof_nombre' => 'Dra. Catalina Fernández',
         'prof_cargo' => 'Optómetra Especializada',
         'prof_texto' => 'Con más de 15 años de experiencia, combina precisión clínica con un trato cercano.',
         'prof_credenciales' => "Optometría Certificada | Universidad Nacional de Colombia\n"
@@ -79,7 +82,7 @@ return [
     'imagenes_por_defecto' => [
         'logo' => 'assets/img/logo-visilux.png',
         'hero_imagen' => 'assets/img/imagen_princi.jpg',
-        'serv1_imagen' => 'assets/img/niños.jpg',
+        'serv1_imagen' => 'assets/img/ninos.jpg',
         'serv2_imagen' => 'assets/img/adultos.jpg',
         'prof_imagen' => 'assets/img/optometra_1.jpg',
     ],
