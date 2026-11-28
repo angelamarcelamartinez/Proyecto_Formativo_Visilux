@@ -6,7 +6,7 @@
     
     <!-- Título dinámico -->
     <title>{{ $pageTitle ?? config('VisiOptica') }} VisiOptica</title>
-    <link rel="icon" type="image/png" href="{{ asset('assets/img/favicon.ico') }}">
+    @include('includes.favicon')
 
     <!-- Fuentes y estilos -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -16,7 +16,7 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
     
     <!-- Ruta de assets de Laravel -->
-    <link href="{{ asset('assets/css/style.css') }}?v={{ @filemtime(public_path('assets/css/style.css')) ?: '20261014' }}" rel="stylesheet">
+    <link href="{{ asset('assets/css/style.css') }}" rel="stylesheet">
 </head>
 <body>
 
@@ -69,6 +69,15 @@
                                 </span>
                             </li>
                             <li><hr class="dropdown-divider"></li>
+                            {{-- Personal de la óptica (admin, recepción, optómetra): enlace a su propio panel --}}
+                            @if (Auth::user()->rutaInicio() !== '/')
+                                <li>
+                                    <a class="dropdown-item py-2 fw-medium" href="{{ url(Auth::user()->rutaInicio()) }}">
+                                        <i class="bi bi-speedometer2 me-2 text-teal"></i>
+                                        {{ Auth::user()->esOptometra() ? 'Mi consultorio' : 'Mi panel' }}
+                                    </a>
+                                </li>
+                            @endif
                             <li>
                                 <!-- Formulario POST seguro para cerrar sesión -->
                                 <form action="{{ route('logout') }}" method="POST" class="d-block w-100 m-0">

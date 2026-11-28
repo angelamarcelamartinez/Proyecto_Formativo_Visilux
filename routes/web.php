@@ -40,6 +40,9 @@ Route::post('/renovar', [\App\Http\Controllers\RenovarController::class, 'store'
 Route::get('/planes/{plan}/contratar', [ContratarController::class, 'create'])->name('contratar.create');
 Route::post('/planes/{plan}/contratar', [ContratarController::class, 'store'])->name('contratar.store');
 Route::get('/planes/solicitud-enviada', [ContratarController::class, 'enviado'])->name('contratar.enviado');
+// Ciudades de un departamento (API de departamentos de Colombia) para el formulario de contratar.
+Route::get('/api-externa/departamentos/{id}/ciudades', [\App\Http\Controllers\ApiExternaController::class, 'ciudades'])
+    ->whereNumber('id')->name('api-externa.ciudades');
 Route::get('/agendar-cita', [SiteController::class, 'agendarCita'])->name('citas.create');
 Route::get('/agendar-cita/horarios', [SiteController::class, 'horariosDisponibles'])->name('citas.horarios');
 Route::post('/agendar-cita', [SiteController::class, 'guardarCita'])->name('citas.store');
@@ -139,6 +142,42 @@ Route::prefix('superadmin')->middleware(['superadmin'])->name('superadmin.')->gr
     Route::put('/planes/{id}', [SuperPlanController::class, 'update'])->name('planes.update');
 });
 
+// --- Módulo del optómetra (rol 7) ---
+// Agenda propia, consulta (historia clínica + fórmula + diagnóstico), pacientes, terapias,
+// horario, perfil y el simulador visual. Los triggers de la BD enlazan usuario ↔ optometra.
+Route::prefix('optometra')->middleware(['auth', 'cambiar.password', 'optometra'])->name('optometra.')->group(function () {
+    Route::get('/', [\App\Http\Controllers\Optometra\PanelController::class, 'index'])->name('dashboard');
+    Route::get('/agenda', [\App\Http\Controllers\Optometra\PanelController::class, 'agenda'])->name('agenda');
+    Route::post('/citas/{id}/estado', [\App\Http\Controllers\Optometra\PanelController::class, 'estadoCita'])->whereNumber('id')->name('citas.estado');
+    Route::get('/horario', [\App\Http\Controllers\Optometra\PanelController::class, 'horario'])->name('horario');
+    Route::get('/perfil', [\App\Http\Controllers\Optometra\PanelController::class, 'perfil'])->name('perfil');
+    Route::put('/perfil', [\App\Http\Controllers\Optometra\PanelController::class, 'actualizarPerfil'])->name('perfil.update');
+
+    // Consulta: atender la cita = historia clínica + fórmula + diagnósticos + medicamentos + terapia
+    Route::get('/citas/{id}/atender', [\App\Http\Controllers\Optometra\ConsultaController::class, 'create'])->whereNumber('id')->name('consulta.create');
+    Route::post('/citas/{id}/atender', [\App\Http\Controllers\Optometra\ConsultaController::class, 'store'])->whereNumber('id')->name('consulta.store');
+    Route::get('/historias/{id}', [\App\Http\Controllers\Optometra\ConsultaController::class, 'show'])->whereNumber('id')->name('historias.show');
+    Route::get('/historias/{id}/editar', [\App\Http\Controllers\Optometra\ConsultaController::class, 'edit'])->whereNumber('id')->name('historias.edit');
+    Route::put('/historias/{id}', [\App\Http\Controllers\Optometra\ConsultaController::class, 'update'])->whereNumber('id')->name('historias.update');
+    Route::get('/historias/{id}/imprimir', [\App\Http\Controllers\Optometra\ConsultaController::class, 'imprimir'])->whereNumber('id')->name('historias.imprimir');
+
+    // Pacientes
+    Route::get('/pacientes', [\App\Http\Controllers\Optometra\PacienteController::class, 'index'])->name('pacientes.index');
+    Route::get('/pacientes/{documento}', [\App\Http\Controllers\Optometra\PacienteController::class, 'show'])->where('documento', '[A-Za-z0-9]+')->name('pacientes.show');
+
+    // Terapias y su evolución
+    Route::get('/terapias', [\App\Http\Controllers\Optometra\TerapiaController::class, 'index'])->name('terapias.index');
+    Route::get('/terapias/{id}', [\App\Http\Controllers\Optometra\TerapiaController::class, 'show'])->whereNumber('id')->name('terapias.show');
+    Route::post('/terapias/{id}/evolucion', [\App\Http\Controllers\Optometra\TerapiaController::class, 'evolucion'])->whereNumber('id')->name('terapias.evolucion');
+    Route::post('/terapias/{id}/estado', [\App\Http\Controllers\Optometra\TerapiaController::class, 'estado'])->whereNumber('id')->name('terapias.estado');
+
+    // Simulador visual (Flash original reproducido con Ruffle). Los .swf se sirven solo con sesión.
+    Route::get('/simulador', [\App\Http\Controllers\Optometra\SimuladorController::class, 'index'])->name('simulador');
+    Route::post('/simulador/registrar', [\App\Http\Controllers\Optometra\SimuladorController::class, 'registrar'])->name('simulador.registrar');
+    Route::get('/simulador/archivos/{ruta}', [\App\Http\Controllers\Optometra\SimuladorController::class, 'archivo'])
+        ->where('ruta', '[A-Za-z0-9_\-\/]+\.swf')->name('simulador.archivo');
+});
+
 // --- Panel de administración de cada óptica ---
 // 'licencia' saca al admin si su óptica está suspendida o sin licencia vigente.
 Route::prefix('admin')->middleware(['auth', 'cambiar.password', 'admin', 'licencia'])->name('admin.')->group(function () {
@@ -174,6 +213,10 @@ Route::prefix('admin')->middleware(['auth', 'cambiar.password', 'admin', 'licenc
     // "Por contactar": marcar un mensaje de Contáctanos como contactado (o volverlo a pendiente)
     Route::post('/por-contactar/{id}/estado', [\App\Http\Controllers\Admin\ContactoController::class, 'estado'])->name('contacto.estado');
 
+    // Sección "API" (ejercicio independiente: muestra las APIs de public/apis). Va ANTES del CRUD genérico para que /admin/api no se lea como una tabla.
+    Route::get('/api', [\App\Http\Controllers\Admin\ApiController::class, 'index'])->name('api.index');
+    Route::get('/triggers', [\App\Http\Controllers\Admin\ApiController::class, 'triggers'])->name('triggers.index');
+
     // CRUD genérico
     // Autocompletar datos del paciente por documento (citas, fórmulas médicas)
     Route::get('/buscar-usuario', [CrudController::class, 'buscarUsuario'])->name('buscar-usuario');
@@ -185,4 +228,37 @@ Route::prefix('admin')->middleware(['auth', 'cambiar.password', 'admin', 'licenc
     Route::get('/{table}/{id}/editar', [CrudController::class, 'edit'])->name('crud.edit');
     Route::put('/{table}/{id}', [CrudController::class, 'update'])->name('crud.update');
     Route::delete('/{table}/{id}', [CrudController::class, 'destroy'])->name('crud.destroy');
+});
+
+// --- Panel de la recepcionista (rol 4) ---
+Route::prefix('recepcion')->middleware(['auth', 'cambiar.password', 'rol:4'])->name('recepcion.')->group(function () {
+    $c = \App\Http\Controllers\Staff\RecepcionController::class;
+
+    Route::get('/', [$c, 'inicio'])->name('inicio');
+
+    // Citas de toda la óptica: ver, confirmar, cancelar y agendar nuevas
+    Route::get('/citas', [$c, 'citas'])->name('citas');
+    Route::get('/citas/exportar', [$c, 'exportarCitas'])->name('citas.exportar');
+    Route::get('/citas/nueva', [$c, 'nuevaCita'])->name('cita.nueva');
+    Route::post('/citas', [$c, 'guardarCita'])->name('cita.guardar');
+    Route::post('/citas/{id}/estado', [$c, 'estadoCita'])->name('cita.estado');
+    Route::get('/buscar-paciente', [$c, 'buscarPaciente'])->name('buscar-paciente');
+
+    // Pacientes
+    Route::get('/pacientes', [$c, 'pacientes'])->name('pacientes');
+    Route::get('/pacientes/nuevo', [$c, 'nuevoPaciente'])->name('paciente.nuevo');
+    Route::post('/pacientes', [$c, 'guardarPaciente'])->name('paciente.guardar');
+
+    // Mensajes de "Contáctanos"
+    Route::get('/por-contactar', [$c, 'contacto'])->name('contacto');
+    Route::post('/por-contactar/{id}/estado', [$c, 'contactoEstado'])->name('contacto.estado');
+});
+
+// --- Chat interno: recepcionista (4) y optómetra (7) de la misma óptica ---
+Route::prefix('chat')->middleware(['auth', 'cambiar.password', 'rol:4,7'])->name('chat.')->group(function () {
+    $c = \App\Http\Controllers\Staff\ChatController::class;
+
+    Route::get('/', [$c, 'index'])->name('index');
+    Route::post('/{documento}', [$c, 'enviar'])->where('documento', '[A-Za-z0-9]+')->name('enviar');
+    Route::get('/{documento}/nuevos', [$c, 'nuevos'])->where('documento', '[A-Za-z0-9]+')->name('nuevos');
 });
