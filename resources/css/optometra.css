@@ -1,0 +1,58 @@
+/*!
+ * Módulo del optómetra · VisiOptica
+ * Fuente de public/assets/css/optometra.css (ver tailwind.optometra.config.cjs).
+ */
+@tailwind components;
+@tailwind utilities;
+
+@layer components {
+    /* Tarjetas */
+    .op-card { @apply bg-white rounded-2xl border border-olive-100 shadow-card; }
+    .op-card-head { @apply px-5 py-4 border-b border-olive-100 flex items-center justify-between gap-3; }
+    .op-section { @apply font-semibold flex items-center gap-2.5; }
+    .op-step { @apply w-6 h-6 rounded-full bg-olive-600 text-cream text-xs font-semibold inline-flex items-center justify-center; }
+
+    /* Botones */
+    .op-btn { @apply inline-flex items-center gap-2 text-sm font-medium px-4 py-2.5 rounded-xl transition whitespace-nowrap cursor-pointer; }
+    .op-btn:disabled { @apply opacity-50 cursor-not-allowed; }
+    .op-btn-sm { @apply px-3 py-1.5 text-xs rounded-lg gap-1.5; }
+    .op-btn-primary { @apply bg-olive-600 hover:bg-olive-700 text-cream shadow-card; }
+    .op-btn-ghost { @apply bg-white border border-olive-100 text-ink hover:bg-olive-50 hover:border-olive-300; }
+    .op-btn-danger { @apply bg-white border border-rose-200 text-rose-700 hover:bg-rose-50; }
+
+    /* Formularios */
+    .op-label { @apply block text-sm font-medium mb-1.5; }
+    .op-input { @apply w-full bg-creamdark/40 border border-olive-100 rounded-xl py-2.5 px-3.5 text-sm text-ink placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-olive-300 focus:bg-white; }
+    .op-input-sm { @apply py-1.5 px-3 text-xs rounded-lg; }
+    .op-input-error { @apply border-rose-300 bg-rose-50; }
+    .op-input-rx { @apply text-center tabular-nums px-2 min-w-[4.25rem]; }
+    .op-check { @apply w-4 h-4 rounded accent-olive-600; }
+
+    /* Estados */
+    .op-chip { @apply inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold bg-olive-50 text-olive-700 ring-1 ring-inset ring-olive-100 whitespace-nowrap; }
+    .op-chip-ok { @apply bg-emerald-50 text-emerald-700 ring-emerald-200; }
+    .op-chip-warn { @apply bg-amber-50 text-amber-700 ring-amber-200; }
+    .op-chip-info { @apply bg-sky-50 text-sky-700 ring-sky-200; }
+    .op-chip-bad { @apply bg-rose-50 text-rose-700 ring-rose-200; }
+
+    /* Tablas */
+    .op-table { @apply w-full text-sm; }
+    .op-table th { @apply text-left text-[11px] uppercase tracking-wider text-muted font-semibold px-4 py-3 bg-creamdark/40; }
+    .op-table td { @apply px-4 py-3 border-t border-olive-100 align-middle; }
+    .op-table-compact th, .op-table-compact td { @apply px-3 py-2; }
+
+    /* Refracción OD / OI */
+    .op-rx { @apply w-full text-sm border-separate; border-spacing: 6px; }
+    .op-rx thead th { @apply text-[11px] uppercase tracking-wider text-muted font-semibold text-center pb-1; }
+    .op-rx tbody th { @apply font-serif text-lg text-olive-700 pr-2 text-left w-10; }
+    .op-rx-read td, .op-rx-mini td { @apply text-center tabular-nums bg-creamdark/40 rounded-lg py-2 px-2; }
+    .op-rx-mini { border-spacing: 4px; @apply text-xs; }
+    .op-rx-mini tbody th { @apply text-sm; }
+
+    /* Simulador */
+    .op-sim { @apply relative w-full bg-black rounded-2xl overflow-hidden shadow-card; aspect-ratio: 4 / 3; }
+    .op-sim:fullscreen { @apply rounded-none; aspect-ratio: auto; width: 100vw; height: 100vh; }
+    .op-sim-player { @apply absolute inset-0; }
+    .op-sim-cargando { @apply absolute inset-0 flex flex-col items-center justify-center gap-2 text-center text-cream bg-ink text-sm px-6; }
+    .op-spinner { @apply w-10 h-10 rounded-full border-4 border-white/20 border-t-olive-300 animate-spin mb-2; }
+}
