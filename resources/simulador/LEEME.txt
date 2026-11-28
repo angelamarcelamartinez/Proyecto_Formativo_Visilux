@@ -1,0 +1,14 @@
+SIMULADOR VISUAL (MSD Ophthalmics · Vision Simulator, versión en español)
+=========================================================================
+
+vsmsd/visionsimulator.swf  → menú principal. Se extrajo del proyector VS-MSD-ES.exe
+                             (el .exe solo es el reproductor de Flash con este .swf adentro).
+vsmsd/swf/*.swf            → módulos originales (intro, anatomía, enfermedades y errores refractivos
+                             en las 4 escenas: m1 ciudad, m2 Nueva York, m3 París, m4 playa).
+
+Estos archivos NO están en public/: solo los descarga un optómetra con la sesión iniciada,
+por la ruta /optometra/simulador/archivos/... (SimuladorController@archivo).
+En el navegador los reproduce Ruffle (public/assets/ruffle), el emulador de Flash en WebAssembly.
+
+Licencia: el simulador es propiedad de Eyeland Design Network GmbH / MSD (ver el "Acuerdo de
+licencia del software" que venía con el CD). Úsalo solo dentro de la óptica que tiene la licencia.
