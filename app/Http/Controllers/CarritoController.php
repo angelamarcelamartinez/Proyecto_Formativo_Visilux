@@ -10,8 +10,8 @@ use Illuminate\Support\Facades\Auth;
 
 class CarritoController extends Controller
 {
-    /** Clave de sesión donde vive el carrito de un invitado (sin sesión iniciada). */
-    private const CLAVE_SESION = 'carrito_invitado';
+    /** Clave de sesión: producto que la persona quiso agregar justo antes de iniciar sesión o registrarse. */
+    private const CLAVE_PENDIENTE = 'carrito_pendiente';
 
     /**
      * Busca el carrito "abierto" del usuario (id_estado = 1), o le
@@ -34,100 +34,108 @@ class CarritoController extends Controller
         return $carrito;
     }
 
+    /** Suma $cantidad del producto al carrito abierto del usuario (crea la línea si no existe). */
+    private function sumarAlCarrito($documento, Producto $producto, int $cantidad = 1): void
+    {
+        $carrito = $this->carritoActivoDe($documento);
+        $precio = $producto->precio ?? 0;
+
+        $detalle = DetalleCarritoProducto::where('id_carrito', $carrito->id_carrito)
+            ->where('id_producto', $producto->id_producto)
+            ->first();
+
+        if ($detalle) {
+            $detalle->cantidad += $cantidad;
+            $detalle->subtotal = $detalle->cantidad * $detalle->precio_unitario;
+            $detalle->save();
+
+            return;
+        }
+
+        DetalleCarritoProducto::create([
+            'id_carrito' => $carrito->id_carrito,
+            'id_producto' => $producto->id_producto,
+            'cantidad' => $cantidad,
+            'precio_unitario' => $precio,
+            'subtotal' => $precio * $cantidad,
+        ]);
+    }
+
     /**
-     * Agrega (o suma 1 a) un producto al carrito.
-     *
-     * Ya NO exige sesión iniciada: si la persona es invitada, el
-     * producto se guarda en la sesión del navegador. Si ya inició
-     * sesión, se guarda directo en la base de datos, como antes.
+     * El optómetra tiene su cuenta en la tabla `optometra`, no en `usuario`, y carrito.id_usuario apunta a `usuario`:
+     * no puede comprar. Si lo intenta, vuelve al inicio con un aviso (en vez de un error de la base de datos).
+     */
+    private function sinCarritoParaPersonal()
+    {
+        if (Auth::user() instanceof \App\Models\Optometra) {
+            return redirect()->route('home')->with('info', 'Tu cuenta de optómetra no tiene carrito de compras.');
+        }
+
+        return null;
+    }
+
+    /** Manda a iniciar sesión (o registrarse) y, al volver, deja a la persona en el carrito. */
+    private function pedirSesion(Request $request, string $mensaje)
+    {
+        $request->session()->put('url.intended', route('carrito.index'));
+
+        return redirect()->route('login')->with('info', $mensaje);
+    }
+
+    /**
+     * Agrega (o suma 1 a) un producto al carrito. Comprar exige tener cuenta: si no hay sesión,
+     * se recuerda el producto, se manda a iniciar sesión o registrarse y se agrega al volver.
      */
     public function agregar(Request $request, int $id_producto)
     {
         $producto = Producto::activos()->findOrFail($id_producto);
 
-        if (Auth::check()) {
-            $carrito = $this->carritoActivoDe(Auth::id());
+        if (! Auth::check()) {
+            $pendiente = $request->session()->get(self::CLAVE_PENDIENTE, []);
+            $pendiente[$id_producto] = ($pendiente[$id_producto] ?? 0) + 1;
+            $request->session()->put(self::CLAVE_PENDIENTE, $pendiente);
 
-            $detalle = DetalleCarritoProducto::where('id_carrito', $carrito->id_carrito)
-                ->where('id_producto', $producto->id_producto)
-                ->first();
-
-            if ($detalle) {
-                $detalle->cantidad += 1;
-                $detalle->subtotal = $detalle->cantidad * $detalle->precio_unitario;
-                $detalle->save();
-            } else {
-                DetalleCarritoProducto::create([
-                    'id_carrito' => $carrito->id_carrito,
-                    'id_producto' => $producto->id_producto,
-                    'cantidad' => 1,
-                    'precio_unitario' => $producto->precio ?? 0,
-                    'subtotal' => $producto->precio ?? 0,
-                ]);
-            }
-        } else {
-            // Invitado: el carrito es solo un arreglo [id_producto => cantidad] en la sesión.
-            $carritoSesion = session(self::CLAVE_SESION, []);
-            $carritoSesion[$id_producto] = ($carritoSesion[$id_producto] ?? 0) + 1;
-            session([self::CLAVE_SESION => $carritoSesion]);
+            return $this->pedirSesion($request, 'Inicia sesión o regístrate para comprar. Tu producto te espera en el carrito.');
         }
+
+        if ($bloqueo = $this->sinCarritoParaPersonal()) {
+            return $bloqueo;
+        }
+
+        $this->sumarAlCarrito(Auth::id(), $producto);
 
         return back()->with('ok', "«{$producto->nombre_producto}» se agregó al carrito.");
     }
 
-    /**
-     * Arma la lista de líneas del carrito para mostrarla en la vista,
-     * sin importar si la persona es invitada o tiene sesión iniciada
-     * -- en los 2 casos entrega objetos con la misma forma, para que
-     * la vista no tenga que preocuparse por la diferencia.
-     */
+    /** Líneas del carrito del usuario con sesión y el total. */
     private function obtenerLineas(): array
     {
-        if (Auth::check()) {
-            $carrito = $this->carritoActivoDe(Auth::id());
+        $carrito = $this->carritoActivoDe(Auth::id());
 
-            $lineas = DetalleCarritoProducto::with('producto')
-                ->where('id_carrito', $carrito->id_carrito)
-                ->get()
-                ->map(fn ($d) => [
-                    'id' => $d->id_detalle_carr_pro,
-                    'producto' => $d->producto,
-                    'cantidad' => $d->cantidad,
-                    'precio_unitario' => $d->precio_unitario,
-                    'subtotal' => $d->subtotal,
-                ]);
-
-            return [$lineas, $lineas->sum('subtotal')];
-        }
-
-        // Invitado: reconstruimos las líneas a partir de la sesión + los productos reales.
-        $carritoSesion = session(self::CLAVE_SESION, []);
-        if (empty($carritoSesion)) {
-            return [collect(), 0];
-        }
-
-        $productos = Producto::whereIn('id_producto', array_keys($carritoSesion))->get()->keyBy('id_producto');
-
-        $lineas = collect($carritoSesion)->map(function ($cantidad, $id_producto) use ($productos) {
-            $producto = $productos->get($id_producto);
-            if (! $producto) {
-                return null; // el producto pudo haberse desactivado despues de agregarlo
-            }
-            $precio = $producto->precio ?? 0;
-            return [
-                'id' => $id_producto, // para invitados, el "id" de la linea es el id_producto
-                'producto' => $producto,
-                'cantidad' => $cantidad,
-                'precio_unitario' => $precio,
-                'subtotal' => $precio * $cantidad,
-            ];
-        })->filter()->values();
+        $lineas = DetalleCarritoProducto::with('producto')
+            ->where('id_carrito', $carrito->id_carrito)
+            ->get()
+            ->map(fn ($d) => [
+                'id' => $d->id_detalle_carr_pro,
+                'producto' => $d->producto,
+                'cantidad' => $d->cantidad,
+                'precio_unitario' => $d->precio_unitario,
+                'subtotal' => $d->subtotal,
+            ]);
 
         return [$lineas, $lineas->sum('subtotal')];
     }
 
-    public function index()
+    public function index(Request $request)
     {
+        if (! Auth::check()) {
+            return $this->pedirSesion($request, 'Inicia sesión o regístrate para ver tu carrito.');
+        }
+
+        if ($bloqueo = $this->sinCarritoParaPersonal()) {
+            return $bloqueo;
+        }
+
         [$lineas, $total] = $this->obtenerLineas();
 
         return view('carrito.index', [
@@ -137,69 +145,63 @@ class CarritoController extends Controller
         ]);
     }
 
-    /**
-     * Cambia la cantidad de una línea. $id es el id_detalle_carr_pro
-     * si hay sesión iniciada, o el id_producto si es invitado.
-     */
+    /** Cambia la cantidad de una línea ($id es el id_detalle_carr_pro). */
     public function actualizar(Request $request, $id)
     {
+        if (! Auth::check()) {
+            return $this->pedirSesion($request, 'Inicia sesión para modificar tu carrito.');
+        }
+
+        if ($bloqueo = $this->sinCarritoParaPersonal()) {
+            return $bloqueo;
+        }
+
         $cantidad = max(1, (int) $request->get('cantidad', 1));
 
-        if (Auth::check()) {
-            $detalle = DetalleCarritoProducto::with('carrito')->findOrFail($id);
+        $detalle = DetalleCarritoProducto::with('carrito')->findOrFail($id);
 
-            if ($detalle->carrito->id_usuario != Auth::id()) {
-                abort(403);
-            }
-
-            $detalle->cantidad = $cantidad;
-            $detalle->subtotal = $cantidad * $detalle->precio_unitario;
-            $detalle->save();
-        } else {
-            $carritoSesion = session(self::CLAVE_SESION, []);
-            if (isset($carritoSesion[$id])) {
-                $carritoSesion[$id] = $cantidad;
-                session([self::CLAVE_SESION => $carritoSesion]);
-            }
+        if ($detalle->carrito->id_usuario != Auth::id()) {
+            abort(403);
         }
+
+        $detalle->cantidad = $cantidad;
+        $detalle->subtotal = $cantidad * $detalle->precio_unitario;
+        $detalle->save();
 
         return back()->with('ok', 'Cantidad actualizada.');
     }
 
-    /**
-     * Quita una línea completa del carrito (invitado o con sesión).
-     */
-    public function eliminar($id)
+    /** Quita una línea completa del carrito. */
+    public function eliminar(Request $request, $id)
     {
-        if (Auth::check()) {
-            $detalle = DetalleCarritoProducto::with('carrito')->findOrFail($id);
-
-            if ($detalle->carrito->id_usuario != Auth::id()) {
-                abort(403);
-            }
-
-            $detalle->delete();
-        } else {
-            $carritoSesion = session(self::CLAVE_SESION, []);
-            unset($carritoSesion[$id]);
-            session([self::CLAVE_SESION => $carritoSesion]);
+        if (! Auth::check()) {
+            return $this->pedirSesion($request, 'Inicia sesión para modificar tu carrito.');
         }
+
+        if ($bloqueo = $this->sinCarritoParaPersonal()) {
+            return $bloqueo;
+        }
+
+        $detalle = DetalleCarritoProducto::with('carrito')->findOrFail($id);
+
+        if ($detalle->carrito->id_usuario != Auth::id()) {
+            abort(403);
+        }
+
+        $detalle->delete();
 
         return back()->with('ok', 'Producto eliminado del carrito.');
     }
 
-    /**
-     * Botón "Finalizar compra". Si es invitado, lo manda a iniciar
-     * sesión SIN perder lo que ya agregó (el carrito de sesión se
-     * fusiona solo al iniciar sesión, ver fusionarCarritoInvitado()).
-     */
+    /** Botón "Finalizar compra". */
     public function finalizar(Request $request)
     {
         if (! Auth::check()) {
-            $request->session()->put('url.intended', route('carrito.index'));
+            return $this->pedirSesion($request, 'Inicia sesión o regístrate para finalizar tu compra.');
+        }
 
-            return redirect()->route('login')
-                ->with('info', 'Inicia sesión para finalizar tu compra. Tus productos siguen en el carrito.');
+        if ($bloqueo = $this->sinCarritoParaPersonal()) {
+            return $bloqueo;
         }
 
         // Aquí, más adelante, iría la lógica real de checkout/pago.
@@ -207,47 +209,30 @@ class CarritoController extends Controller
     }
 
     /**
-     * Se llama automáticamente justo después de un login exitoso
-     * (desde LoginController::authenticated()). Toma lo que la
-     * persona agregó al carrito como invitada y lo traslada a su
-     * carrito real en la base de datos, sumando cantidades si ya
-     * tenía algo de antes.
+     * Se llama justo después de iniciar sesión o registrarse (LoginController y RegisterController):
+     * agrega al carrito real el producto que la persona quiso comprar antes de entrar.
      */
-    public function fusionarCarritoInvitado($documento): void
+    public function agregarPendiente($documento): void
     {
-        $carritoSesion = session(self::CLAVE_SESION, []);
-        if (empty($carritoSesion)) {
+        $pendiente = session(self::CLAVE_PENDIENTE, []);
+        if (empty($pendiente)) {
             return;
         }
 
-        $carrito = $this->carritoActivoDe($documento);
+        // Un optómetra no puede tener carrito: se descarta lo que había quedado pendiente.
+        if (Auth::user() instanceof \App\Models\Optometra) {
+            session()->forget(self::CLAVE_PENDIENTE);
 
-        foreach ($carritoSesion as $id_producto => $cantidad) {
-            $producto = Producto::find($id_producto);
-            if (! $producto) {
-                continue;
-            }
+            return;
+        }
 
-            $detalle = DetalleCarritoProducto::where('id_carrito', $carrito->id_carrito)
-                ->where('id_producto', $id_producto)
-                ->first();
-
-            if ($detalle) {
-                $detalle->cantidad += $cantidad;
-                $detalle->subtotal = $detalle->cantidad * $detalle->precio_unitario;
-                $detalle->save();
-            } else {
-                $precio = $producto->precio ?? 0;
-                DetalleCarritoProducto::create([
-                    'id_carrito' => $carrito->id_carrito,
-                    'id_producto' => $id_producto,
-                    'cantidad' => $cantidad,
-                    'precio_unitario' => $precio,
-                    'subtotal' => $precio * $cantidad,
-                ]);
+        foreach ($pendiente as $id_producto => $cantidad) {
+            $producto = Producto::activos()->find($id_producto);
+            if ($producto) {
+                $this->sumarAlCarrito($documento, $producto, (int) $cantidad);
             }
         }
 
-        session()->forget(self::CLAVE_SESION);
+        session()->forget(self::CLAVE_PENDIENTE);
     }
 }
