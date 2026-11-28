@@ -53,6 +53,17 @@ class AgendaCitas
         return self::minutosPorNombre(DB::table('tipo_cita')->where('id_tipo_cita', $idTipoCita)->value('nombre_tipo'));
     }
 
+    /**
+     * Limita una consulta que ya une la tabla `optometra` a los optómetras de la óptica $nit
+     * (se comparan los 9 primeros dígitos del NIT, como en el resto del panel). Sin NIT no filtra.
+     */
+    protected static function deLaOptica($query, ?string $nit)
+    {
+        $base = substr(preg_replace('/\D/', '', (string) $nit), 0, 9);
+
+        return $base === '' ? $query : $query->whereRaw('SUBSTR(CAST(optometra.nit_empresa AS CHAR), 1, 9) = ?', [$base]);
+    }
+
     protected static function aMinutos(string $hora): int
     {
         return ((int) substr($hora, 0, 2)) * 60 + (int) substr($hora, 3, 2);
@@ -75,6 +86,12 @@ class AgendaCitas
         return DB::table('estado')->where('nom_estado', 'Cancelado')->value('id_estado');
     }
 
+    /** Id del estado "Confirmada" (11 si la tabla estado no lo trae con ese nombre). */
+    public static function estadoConfirmada(): int
+    {
+        return (int) (DB::table('estado')->where('nom_estado', 'Confirmada')->value('id_estado') ?? 11);
+    }
+
     /** Id del estado con el que nace una cita nueva ("Pendiente"). */
     public static function estadoPendiente(): int
     {
@@ -85,7 +102,7 @@ class AgendaCitas
     /**
      * Turnos libres de una fecha: [['hora' => '08:00', 'id_optometra' => 1, 'optometra' => 'Nombre'], ...]
      */
-    public static function turnosLibres(Carbon $fecha, ?int $idTipoCita = null, ?int $ignorarIdCita = null): Collection
+    public static function turnosLibres(Carbon $fecha, ?int $idTipoCita = null, ?int $ignorarIdCita = null, ?string $nit = null): Collection
     {
         $duracion = self::minutosDelTipo($idTipoCita);
 
@@ -94,15 +111,21 @@ class AgendaCitas
             return collect();
         }
 
+        // Los festivos de Colombia no se atienden (API de festivos, app/Support/ApisExternas.php):
+        // ese día no hay turnos, así no se puede agendar ni desde la web ni desde recepción.
+        if (self::esFestivo($fecha)) {
+            return collect();
+        }
+
         $dia = self::nombreDia($fecha);
 
-        $bloques = DB::table('horario')
-            ->join('optometra', 'optometra.doc_optometra', '=', 'horario.id_optometra')
+        $bloques = self::deLaOptica(DB::table('horario')
+            ->join('optometra', 'optometra.doc_optometra', '=', 'horario.id_optometra'), $nit)
             ->where('horario.dia_semana', $dia)
             // La terapia puede usar los bloques de terapia y los de cita; las demás citas, solo los de cita
             ->whereIn('horario.tipo_bloque', $duracion >= self::MINUTOS_TERAPIA ? ['terapia', 'cita'] : ['cita'])
             ->where('horario.estado', 'libre')
-            ->where('optometra.id_estado', 1) // solo optómetras activos
+            ->whereIn('optometra.id_estado', [1, 3]) // activos (3 = cuenta nueva que aún no cambia la contraseña temporal)
             ->orderBy('horario.hora_inicio')
             ->get([
                 'horario.id_optometra', 'horario.hora_inicio', 'horario.hora_fin',
@@ -131,28 +154,8 @@ class AgendaCitas
             ->map(function ($c) {
                 $ini = self::aMinutos($c->hora_cita);
 
-                return ['opt' => (int) $c->id_optometra, 'ini' => $ini, 'fin' => $ini + self::minutosPorNombre($c->nombre_tipo)];
+                return ['opt' => (string) $c->id_optometra, 'ini' => $ini, 'fin' => $ini + self::minutosPorNombre($c->nombre_tipo)];
             });
-
-        // Solicitudes de visitantes (sin cuenta) que siguen pendientes:
-        // también apartan el turno hasta que el administrador las resuelva.
-        // El tipo de cita de una solicitud va escrito en el texto del motivo.
-        if (self::solicitudesGuardanTurno()) {
-            $pendiente = self::estadoPendiente();
-            $solicitudes = DB::table('usuarios_no_registrados')
-                ->whereDate('fecha_cita', $fecha->toDateString())
-                ->whereNotNull('hora_cita')
-                ->where(fn ($q) => $q->whereNull('id_estado')->orWhere('id_estado', $pendiente))
-                ->get(['id_optometra', 'hora_cita', 'motivo_cita'])
-                ->map(function ($c) {
-                    $ini = self::aMinutos($c->hora_cita);
-
-                    return ['opt' => (int) $c->id_optometra, 'ini' => $ini, 'fin' => $ini + self::minutosPorNombre(
-                        preg_match('/— (.+?)\. Prefiere/u', (string) $c->motivo_cita, $m) ? $m[1] : null
-                    )];
-                });
-            $ocupadas = $ocupadas->merge($solicitudes);
-        }
 
         $limiteHoy = $fecha->isToday() ? now()->addMinutes(30)->format('H:i') : null;
 
@@ -170,12 +173,12 @@ class AgendaCitas
                 if ($limiteHoy && $hora < $limiteHoy) {
                     continue;
                 }
-                $choca = $ocupadas->contains(fn ($o) => $o['opt'] === (int) $b->id_optometra
+                $choca = $ocupadas->contains(fn ($o) => $o['opt'] === (string) $b->id_optometra
                     && self::seCruzan($ini, $fn, $o['ini'], $o['fin']));
                 if ($choca) {
                     continue;
                 }
-                $bloqueado = $bloqueos->contains(fn ($x) => (int) $x->id_optometra === (int) $b->id_optometra
+                $bloqueado = $bloqueos->contains(fn ($x) => (string) $x->id_optometra === (string) $b->id_optometra
                     && self::seCruzan($ini, $fn, self::aMinutos($x->hora_inicio), self::aMinutos($x->hora_fin)));
                 if ($bloqueado) {
                     continue;
@@ -183,7 +186,7 @@ class AgendaCitas
 
                 $turnos->push([
                     'hora' => $hora,
-                    'id_optometra' => (int) $b->id_optometra,
+                    'id_optometra' => (string) $b->id_optometra,
                     'optometra' => $b->optometra,
                     'minutos' => $duracion,
                 ]);
@@ -195,19 +198,11 @@ class AgendaCitas
             ->values();
     }
 
-    /** ¿La tabla de solicitudes ya tiene las columnas de fecha y hora? (script SQL ejecutado) */
-    public static function solicitudesGuardanTurno(): bool
-    {
-        static $tiene = null;
-
-        return $tiene ??= Schema::hasColumns('usuarios_no_registrados', ['fecha_cita', 'hora_cita', 'id_optometra', 'id_estado']);
-    }
-
     /**
      * ¿Ese turno ya está ocupado por una cita (no cancelada)?
      * Se usa también al crear/editar citas desde el panel.
      */
-    public static function citaOcupada(string $fecha, string $hora, int $idOptometra, ?int $ignorarIdCita = null, ?int $idTipoCita = null): bool
+    public static function citaOcupada(string $fecha, string $hora, string $idOptometra, ?int $ignorarIdCita = null, ?int $idTipoCita = null): bool
     {
         $cancelado = self::estadoCancelado();
         $ini = self::aMinutos($hora);
@@ -227,20 +222,86 @@ class AgendaCitas
             });
     }
 
-    public static function turnoDisponible(Carbon $fecha, string $hora, int $idOptometra, ?int $idTipoCita = null): bool
+    /**
+     * ¿La fecha es festivo? Si la API de festivos no responde se devuelve false (no se bloquea la agenda)
+     * y el calendario muestra el aviso de que no se pudieron consultar los festivos.
+     */
+    public static function esFestivo(Carbon $fecha): bool
     {
-        return self::turnosLibres($fecha, $idTipoCita)
+        return (bool) (ApisExternas::esFestivo($fecha->toDateString())['festivo'] ?? false);
+    }
+
+    public static function turnoDisponible(Carbon $fecha, string $hora, string $idOptometra, ?int $idTipoCita = null, ?string $nit = null): bool
+    {
+        return self::turnosLibres($fecha, $idTipoCita, null, $nit)
             ->contains(fn ($t) => $t['hora'] === $hora && $t['id_optometra'] === $idOptometra);
     }
 
-    /** Días de la semana en los que hay atención de citas (para orientar al paciente). */
-    public static function diasConAtencion(): array
+    /**
+     * Reglas motivo → tipo de cita: [texto que contiene el nombre del motivo, texto que contiene el nombre del tipo].
+     * Se revisan en orden y gana la primera que coincida (por eso "adaptación" va antes que "control").
+     */
+    protected const TIPO_POR_MOTIVO = [
+        ['adaptaci', 'adaptaci'],
+        ['dolor', 'urgencia'],
+        ['control', 'control'],
+        ['pedi', 'examen visual'],
+        ['fórmula', 'examen visual'],
+        ['formula', 'examen visual'],
+        ['convergencia', 'examen visual'],
+        ['revisi', 'consulta'],
+        ['rutina', 'consulta'],
+    ];
+
+    /** Id del tipo de cita que corresponde a un motivo (el tipo ya no se escoge aparte). */
+    public static function tipoParaMotivo(?int $idMotivo): ?int
     {
-        $dias = DB::table('horario')
-            ->join('optometra', 'optometra.doc_optometra', '=', 'horario.id_optometra')
+        if (! $idMotivo) {
+            return null;
+        }
+
+        $motivo = mb_strtolower((string) DB::table('motivos_cita')->where('id_motivo', $idMotivo)->value('nombre_motivo'));
+        if ($motivo === '') {
+            return null;
+        }
+
+        $tipos = DB::table('tipo_cita')->orderBy('id_tipo_cita')->get(['id_tipo_cita', 'nombre_tipo']);
+
+        foreach (self::TIPO_POR_MOTIVO as [$enMotivo, $enTipo]) {
+            if (mb_strpos($motivo, $enMotivo) === false) {
+                continue;
+            }
+            $tipo = $tipos->first(fn ($x) => mb_strpos(mb_strtolower($x->nombre_tipo), $enTipo) !== false);
+            if ($tipo) {
+                return (int) $tipo->id_tipo_cita;
+            }
+        }
+
+        // Sin regla que aplique: consulta general, o el primer tipo que exista.
+        $general = $tipos->first(fn ($x) => mb_strpos(mb_strtolower($x->nombre_tipo), 'consulta') !== false);
+
+        return (int) ($general->id_tipo_cita ?? $tipos->first()->id_tipo_cita ?? 0) ?: null;
+    }
+
+    /** [id_motivo => id_tipo_cita] para que el formulario escoja el tipo apenas se elige el motivo. */
+    public static function mapaTipoPorMotivo(): array
+    {
+        $mapa = [];
+        foreach (DB::table('motivos_cita')->pluck('id_motivo') as $id) {
+            $mapa[(int) $id] = self::tipoParaMotivo((int) $id);
+        }
+
+        return $mapa;
+    }
+
+    /** Días de la semana en los que hay atención de citas (para orientar al paciente). */
+    public static function diasConAtencion(?string $nit = null): array
+    {
+        $dias = self::deLaOptica(DB::table('horario')
+            ->join('optometra', 'optometra.doc_optometra', '=', 'horario.id_optometra'), $nit)
             ->where('horario.tipo_bloque', 'cita')
             ->where('horario.estado', 'libre')
-            ->where('optometra.id_estado', 1)
+            ->whereIn('optometra.id_estado', [1, 3])
             ->distinct()
             ->pluck('horario.dia_semana')
             ->all();

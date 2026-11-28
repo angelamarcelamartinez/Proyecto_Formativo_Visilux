@@ -2,16 +2,19 @@
 
 namespace App\Http\Controllers;
 
+use App\Support\ApisExternas;
 use App\Models\Empresa;
 use App\Models\PaginaEmpresa;
 use App\Support\AgendaCitas;
 use App\Support\Licencias;
+use App\Support\Nit;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Validation\Rule;
 
 class SiteController extends Controller
 {
@@ -53,6 +56,8 @@ class SiteController extends Controller
         return view('index', [
             'empresa' => $empresa,
             'pagina' => PaginaEmpresa::deEmpresa($empresa),
+            // Índice UV actual de Ibagué para la sección de rayos UV (null si la API no respondió).
+            'uv' => ApisExternas::uvActual(),
             'pageTitle' => $empresa->nombre . ' ·',
         ]);
     }
@@ -75,11 +80,14 @@ class SiteController extends Controller
     /**
      * Vista pública: Planes (Free, Básico, Profesional, Empresarial).
      */
+    // GET /planes: página pública con los planes a la venta.
     public function planes()
     {
         // Los precios salen de la tabla `plan`, que edita el superadmin.
+        // Planes activos ordenados por duración; los precios los edita el superadmin en la tabla plan.
         $planes = \App\Models\Plan::where('activo', 1)->orderBy('meses')->get();
 
+        // Muestra resources/views/planes.blade.php.
         return view('planes', compact('planes'));
     }
 
@@ -94,9 +102,13 @@ class SiteController extends Controller
     {
         $request->validate([
             'nombre' => ['required', 'string', 'max:150'],
-            'correo' => ['required', 'email', 'max:150'],
+            // La columna correo_contactenos es VARCHAR(50): un correo más largo no cabría en la base.
+            'correo' => ['required', 'email', 'max:50'],
             'telefono' => ['nullable', 'string', 'max:20'],
             'mensaje' => ['required', 'string', 'max:2000'],
+        ], [
+            'correo.max' => 'El correo no puede tener más de 50 caracteres.',
+            'mensaje.required' => 'Escribe tu mensaje.',
         ]);
 
         // Se guarda a nombre de la óptica cuya página estaba viendo el visitante
@@ -112,7 +124,10 @@ class SiteController extends Controller
 
             // Columnas del script database/sql/2026_10_19_mensajes_contacto.sql (si ya se ejecutó)
             if (Schema::hasColumn('mensajes_contacto', 'nit_empresa')) {
-                $mensaje['nit_empresa'] = session('optica_nit', config('visioptica.empresa_principal'));
+                // Óptica que se estaba viendo; si no se visitó su página, la principal. El NIT se adapta al tipo de columna
+                // (un NIT de 10 dígitos no cabe en una columna INT).
+                $nit = session('optica_nit') ?? Empresa::principal()?->getRawOriginal('nit') ?? config('visioptica.empresa_principal');
+                $mensaje['nit_empresa'] = Nit::paraColumna('mensajes_contacto', 'nit_empresa', $nit);
             }
             if (Schema::hasColumn('mensajes_contacto', 'estado_contactenos')) {
                 $mensaje['estado_contactenos'] = 'Por contactar';
@@ -124,20 +139,34 @@ class SiteController extends Controller
             DB::table('mensajes_contacto')->insert($mensaje);
         }
 
-        return back()->with('contacto_enviado', true);
+        return redirect()->route('conocenos')->with('contacto_enviado', true);
     }
 
     /**
      * Vista pública: agendar una cita.
      *
-     * La persona escoge el día y uno de los turnos libres (según los
-     * horarios de los optómetras). Si inició sesión, la cita queda
-     * reservada de una vez; si no, se guarda como solicitud en
-     * `usuarios_no_registrados` para que el administrador la confirme.
+     * La persona escoge el motivo (el tipo de cita sale del motivo), el día y uno de los
+     * turnos libres de los optómetras habilitados. Para reservar hay que tener cuenta:
+     * si no ha iniciado sesión, al enviar el formulario se le pide entrar o registrarse
+     * y, al volver, el formulario aparece con lo que ya había escogido.
      */
-    public function agendarCita()
+    /** NIT de la óptica cuya agenda se consulta: la de la persona con sesión o la que se está viendo en el sitio. */
+    protected function nitAgenda(): ?string
+    {
+        $nit = Auth::user()?->nit_empresa ?: session('optica_nit', config('visioptica.empresa_principal'));
+
+        return $nit ? (string) $nit : null;
+    }
+
+    public function agendarCita(Request $request)
     {
         $usuario = Auth::user();
+
+        // Datos que la persona ya había escogido antes de ir a iniciar sesión o registrarse.
+        if ($usuario && ($pendiente = $request->session()->pull('cita_pendiente'))) {
+            $request->session()->flashInput($pendiente);
+            $request->session()->flash('cita_recuperada', true);
+        }
 
         $proximasCitas = collect();
         if ($usuario) {
@@ -156,15 +185,19 @@ class SiteController extends Controller
                 ]);
         }
 
+        $tipos = DB::table('tipo_cita')->orderBy('nombre_tipo')->get()->keyBy('id_tipo_cita');
+
         return view('agendar-cita', [
             'motivos' => DB::table('motivos_cita')->orderBy('nombre_motivo')->get(),
-            'tiposCita' => DB::table('tipo_cita')->orderBy('nombre_tipo')->get(),
-            'tiposDocumento' => DB::table('tipo_documento')->orderBy('id_tipo_docu')->get(),
-            'diasAtencion' => AgendaCitas::diasConAtencion(),
+            'tiposCita' => $tipos,
+            'tipoPorMotivo' => AgendaCitas::mapaTipoPorMotivo(),
+            'diasAtencion' => AgendaCitas::diasConAtencion($this->nitAgenda()),
             'usuario' => $usuario,
             'proximasCitas' => $proximasCitas,
             'fechaMin' => now()->toDateString(),
             'fechaMax' => now()->addDays(AgendaCitas::DIAS_MAXIMOS)->toDateString(),
+            // Festivos del rango del calendario (se pintan de amarillo y no se pueden escoger). null si la API no respondió.
+            'festivos' => ApisExternas::festivosEntre(now()->toDateString(), now()->addDays(AgendaCitas::DIAS_MAXIMOS)->toDateString()),
         ]);
     }
 
@@ -182,61 +215,69 @@ class SiteController extends Controller
 
         return response()->json([
             'dia' => AgendaCitas::nombreDia($fecha),
-            'turnos' => AgendaCitas::turnosLibres($fecha, $request->filled('id_tipo_cita') ? (int) $request->id_tipo_cita : null),
+            'turnos' => AgendaCitas::turnosLibres($fecha, $request->filled('id_tipo_cita') ? (int) $request->id_tipo_cita : null, null, $this->nitAgenda()),
             'minutos' => AgendaCitas::minutosDelTipo($request->filled('id_tipo_cita') ? (int) $request->id_tipo_cita : null),
         ]);
     }
 
     /**
-     * Guarda la cita (usuario con sesión) o la solicitud (visitante).
+     * Guarda la cita. Sin sesión no se guarda nada: se recuerda lo escogido, se manda a
+     * iniciar sesión (o a registrarse) y después se vuelve a este formulario.
      */
     public function guardarCita(Request $request)
     {
         $usuario = Auth::user();
 
-        $reglas = [
+        $data = $request->validate([
             'fecha' => ['required', 'date_format:Y-m-d', 'after_or_equal:today'],
             'hora' => ['required', 'date_format:H:i'],
-            'id_optometra' => ['required', 'integer', 'exists:optometra,doc_optometra'],
-            'id_tipo_cita' => ['required', 'integer', 'exists:tipo_cita,id_tipo_cita'],
+            // Solo se pueden escoger optómetras habilitados: los mismos que muestra la agenda (1 = activo, 3 = cuenta nueva).
+            'id_optometra' => ['required', 'string', 'max:20', Rule::exists('optometra', 'doc_optometra')->whereIn('id_estado', [1, 3])],
             'id_motivo' => ['required', 'integer', 'exists:motivos_cita,id_motivo'],
             'comentario' => ['nullable', 'string', 'max:500'],
-        ];
-
-        if (! $usuario) {
-            $reglas += [
-                'nombre' => ['required', 'string', 'max:100'],
-                'id_tipo_docu' => ['required', 'integer', 'exists:tipo_documento,id_tipo_docu'],
-                'documento' => ['required', 'digits_between:5,15'],
-                'telefono' => ['required', 'string', 'max:20'],
-                'correo' => ['required', 'email', 'max:100'],
-            ];
-        }
-
-        $data = $request->validate($reglas, [
+        ], [
             'hora.required' => 'Escoge uno de los horarios disponibles.',
             'id_optometra.required' => 'Escoge uno de los horarios disponibles.',
+            'id_optometra.exists' => 'Ese optómetra no está disponible. Escoge otro horario.',
             'fecha.after_or_equal' => 'La fecha de la cita no puede ser en el pasado.',
         ], [
             'fecha' => 'fecha de la cita',
             'hora' => 'hora de la cita',
             'id_optometra' => 'optómetra',
-            'id_tipo_cita' => 'tipo de cita',
             'id_motivo' => 'motivo de la cita',
-            'id_tipo_docu' => 'tipo de documento',
         ]);
+
+        // El optómetra atiende citas, no las pide: su documento no está en `usuario` y la cita no podría guardarse.
+        if ($usuario instanceof \App\Models\Optometra) {
+            return back()->withInput()->withErrors(['hora' => 'Tu cuenta es de optómetra: las citas las agenda la recepción o el paciente.']);
+        }
+
+        // El tipo de cita lo decide el motivo; no se recibe aparte.
+        $idTipo = AgendaCitas::tipoParaMotivo((int) $data['id_motivo']);
+        if (! $idTipo) {
+            return back()->withInput()->withErrors(['id_motivo' => 'No hay un tipo de cita para ese motivo. Escoge otro.']);
+        }
+
+        // Sin sesión: se guarda lo escogido y se manda a iniciar sesión o registrarse.
+        if (! $usuario) {
+            $request->session()->put('cita_pendiente', $request->only(['fecha', 'hora', 'id_optometra', 'id_motivo', 'comentario']));
+            $request->session()->put('url.intended', route('citas.create'));
+
+            return redirect()->route('login')
+                ->with('info', 'Inicia sesión para reservar tu cita. Si aún no tienes cuenta, regístrate: tu cita te espera.');
+        }
 
         $fecha = Carbon::createFromFormat('Y-m-d', $data['fecha'])->startOfDay();
 
-        // Un visitante con un documento ya registrado debe iniciar sesión
-        if (! $usuario && DB::table('usuario')->where('documento', $data['documento'])->exists()) {
-            return back()->withInput()->withErrors([
-                'documento' => 'Ya tienes una cuenta con este documento. Inicia sesión para reservar tu cita.',
-            ]);
+        // Los festivos no se atienden (API de festivos de Colombia).
+        $festivo = ApisExternas::esFestivo($data['fecha']);
+        if ($festivo && $festivo['festivo']) {
+            return back()->withInput()
+                ->withErrors(['fecha' => "El {$fecha->format('d/m/Y')} es festivo ({$festivo['nombre']}) y la óptica no atiende. Escoge otro día."]);
         }
 
         $motivo = DB::table('motivos_cita')->where('id_motivo', $data['id_motivo'])->value('nombre_motivo');
-        $tipo = DB::table('tipo_cita')->where('id_tipo_cita', $data['id_tipo_cita'])->value('nombre_tipo');
+        $tipo = DB::table('tipo_cita')->where('id_tipo_cita', $idTipo)->value('nombre_tipo');
         $optometra = DB::table('optometra')->where('doc_optometra', $data['id_optometra'])
             ->selectRaw("CONCAT(nombre, ' ', apellido) as n")->value('n');
 
@@ -245,105 +286,66 @@ class SiteController extends Controller
             'hora' => $data['hora'],
             'optometra' => $optometra,
             'tipo' => $tipo,
+            'motivo' => $motivo,
         ];
 
-        if ($usuario) {
-            // Se vuelve a revisar el turno dentro de una transacción para
-            // que dos personas no reserven la misma hora al mismo tiempo.
-            $reservada = DB::transaction(function () use ($data, $fecha, $usuario) {
-                DB::table('asignacion_cita')
-                    ->whereDate('fecha_cita', $fecha->toDateString())
-                    ->where('id_optometra', $data['id_optometra'])
-                    ->lockForUpdate()
-                    ->get();
+        // Se vuelve a revisar el turno dentro de una transacción para
+        // que dos personas no reserven la misma hora al mismo tiempo.
+        $nitAgenda = $this->nitAgenda();
 
-                if (! AgendaCitas::turnoDisponible($fecha, $data['hora'], (int) $data['id_optometra'], (int) $data['id_tipo_cita'])) {
-                    return false;
-                }
+        try {
+        $reservada = DB::transaction(function () use ($data, $fecha, $usuario, $idTipo, $nitAgenda) {
+            DB::table('asignacion_cita')
+                ->whereDate('fecha_cita', $fecha->toDateString())
+                ->where('id_optometra', $data['id_optometra'])
+                ->lockForUpdate()
+                ->get();
 
-                // La misma persona no puede tener dos citas a la misma hora
-                $cancelado = AgendaCitas::estadoCancelado();
-                $yaTiene = DB::table('asignacion_cita')
-                    ->where('id_usuario', $usuario->documento)
-                    ->whereDate('fecha_cita', $fecha->toDateString())
-                    ->where('hora_cita', $data['hora'].':00')
-                    ->when($cancelado, fn ($q) => $q->where('id_estado', '!=', $cancelado))
-                    ->exists();
-                if ($yaTiene) {
-                    return false;
-                }
-
-                DB::table('asignacion_cita')->insert([
-                    'fecha_cita' => $fecha->toDateString(),
-                    'hora_cita' => $data['hora'].':00',
-                    'observaciones' => $data['comentario'] ?? null,
-                    'id_usuario' => $usuario->documento,
-                    'id_optometra' => $data['id_optometra'],
-                    'id_tipo_cita' => $data['id_tipo_cita'],
-                    'id_estado' => AgendaCitas::estadoPendiente(),
-                    'id_motivo' => $data['id_motivo'],
-                ] + (Schema::hasColumn('asignacion_cita', 'nit_empresa')
-                    ? ['nit_empresa' => $usuario->nit_empresa ?? session('optica_nit', config('visioptica.empresa_principal'))]
-                    : []));
-
-                return true;
-            });
-
-            if (! $reservada) {
-                return back()->withInput()->withErrors([
-                    'hora' => 'Ese horario acaba de ser tomado por otra persona. Por favor escoge otro.',
-                ]);
-            }
-
-            return redirect()->route('citas.create')->with('cita_reservada', $resumen);
-        }
-
-        // Visitante: queda como solicitud y el turno escogido queda apartado
-
-        $detalle = "{$motivo} — {$tipo}. Prefiere: {$fecha->toDateString()} a las {$data['hora']} con {$optometra}.";
-        if (! empty($data['comentario'])) {
-            $detalle .= ' Comentario: '.$data['comentario'];
-        }
-
-        $registro = [
-            'documento' => $data['documento'],
-            'correo' => $data['correo'],
-            'nombre' => $data['nombre'],
-            'telefono' => $data['telefono'],
-            'motivo_cita' => $detalle,
-            'fecha_registro' => now(),
-            // Óptica cuya página estaba viendo el visitante
-            'nit_empresa' => session('optica_nit', config('visioptica.empresa_principal')),
-        ];
-        if (Schema::hasColumn('usuarios_no_registrados', 'id_tipo_docu')) {
-            $registro['id_tipo_docu'] = $data['id_tipo_docu'];
-        }
-        if (AgendaCitas::solicitudesGuardanTurno()) {
-            // Se guarda el turno escogido para que quede apartado y nadie más lo tome
-            $registro['fecha_cita'] = $fecha->toDateString();
-            $registro['hora_cita'] = $data['hora'].':00';
-            $registro['id_optometra'] = $data['id_optometra'];
-            $registro['id_estado'] = AgendaCitas::estadoPendiente();
-        }
-
-        $guardada = DB::transaction(function () use ($registro, $fecha, $data) {
-            DB::table('usuarios_no_registrados')->lockForUpdate()->whereDate('fecha_registro', now()->toDateString())->get(['id_usuario_nr']);
-
-            if (! AgendaCitas::turnoDisponible($fecha, $data['hora'], (int) $data['id_optometra'], (int) $data['id_tipo_cita'])) {
+            if (! AgendaCitas::turnoDisponible($fecha, $data['hora'], (string) $data['id_optometra'], $idTipo, $nitAgenda)) {
                 return false;
             }
 
-            DB::table('usuarios_no_registrados')->insert($registro);
+            // La misma persona no puede tener dos citas a la misma hora
+            $cancelado = AgendaCitas::estadoCancelado();
+            $yaTiene = DB::table('asignacion_cita')
+                ->where('id_usuario', $usuario->documento)
+                ->whereDate('fecha_cita', $fecha->toDateString())
+                ->where('hora_cita', $data['hora'].':00')
+                ->when($cancelado, fn ($q) => $q->where('id_estado', '!=', $cancelado))
+                ->exists();
+            if ($yaTiene) {
+                return false;
+            }
+
+            DB::table('asignacion_cita')->insert([
+                'fecha_cita' => $fecha->toDateString(),
+                'hora_cita' => $data['hora'].':00',
+                'observaciones' => $data['comentario'] ?? null,
+                'id_usuario' => $usuario->documento,
+                'id_optometra' => $data['id_optometra'],
+                'id_tipo_cita' => $idTipo,
+                'id_estado' => AgendaCitas::estadoPendiente(),
+                'id_motivo' => $data['id_motivo'],
+            ] + (Schema::hasColumn('asignacion_cita', 'nit_empresa')
+                ? ['nit_empresa' => $usuario->nit_empresa ?? session('optica_nit', config('visioptica.empresa_principal'))]
+                : []));
 
             return true;
         });
+        } catch (\Illuminate\Database\QueryException $e) {
+            // El trigger de la base rechaza una doble reserva (SQLSTATE 45000) si dos personas escogen el mismo turno a la vez.
+            if (($e->errorInfo[0] ?? null) !== '45000') {
+                throw $e;
+            }
+            $reservada = false;
+        }
 
-        if (! $guardada) {
+        if (! $reservada) {
             return back()->withInput()->withErrors([
-                'hora' => 'Ese horario ya no está disponible. Por favor escoge otro.',
+                'hora' => 'Ese horario acaba de ser tomado por otra persona, o ya tienes una cita a esa hora. Escoge otro.',
             ]);
         }
 
-        return redirect()->route('citas.create')->with('cita_enviada', $resumen);
+        return redirect()->route('citas.create')->with('cita_reservada', $resumen);
     }
 }
